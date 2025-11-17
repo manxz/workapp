@@ -8,7 +8,7 @@ export type Task = {
   id: string;
   number: number;
   title: string;
-  status: "todo" | "in_progress" | "backlog" | "done";
+  status: "todo" | "in_progress" | "backlog" | "done" | "blocked";
   type: "task" | "feature";
   project: string;
   assignee_id: string | null;
