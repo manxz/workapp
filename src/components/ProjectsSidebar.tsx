@@ -77,17 +77,19 @@ export default function ProjectsSidebar({
         <div className="flex flex-col px-2">
           {projects.map((project) => (
             <div key={project.id} className="relative group">
-              <button
-                onClick={() => onSelectProject?.(project)}
-                className={`flex items-center justify-between w-full px-2 py-1.5 rounded-[7px] transition-colors ${
-                  selectedId === project.id
-                    ? "bg-neutral-200"
-                    : "hover:bg-neutral-200"
-                }`}
-              >
-                <p className="text-[13px] font-semibold text-black">
-                  {project.name}
-                </p>
+              <div className={`flex items-center justify-between w-full px-2 py-1.5 rounded-[7px] transition-colors ${
+                selectedId === project.id
+                  ? "bg-neutral-200"
+                  : "hover:bg-neutral-200"
+              }`}>
+                <button
+                  onClick={() => onSelectProject?.(project)}
+                  className="flex-1 text-left"
+                >
+                  <p className="text-[13px] font-semibold text-black">
+                    {project.name}
+                  </p>
+                </button>
                 
                 {/* Kebab Menu Button */}
                 <button
@@ -95,11 +97,11 @@ export default function ProjectsSidebar({
                     e.stopPropagation();
                     setShowMenu(showMenu === project.id ? null : project.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 text-neutral-600 hover:text-black rounded-md w-5 h-5 flex items-center justify-center transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 text-neutral-600 hover:text-black rounded-md w-5 h-5 flex items-center justify-center transition-opacity flex-shrink-0"
                 >
                   <DotsThreeVertical size={16} weight="bold" />
                 </button>
-              </button>
+              </div>
               
               {/* Dropdown Menu */}
               {showMenu === project.id && (
