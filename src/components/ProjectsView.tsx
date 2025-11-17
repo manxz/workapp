@@ -215,7 +215,7 @@ function TaskRow({
   onStatusChange,
 }: {
   task: any;
-  onStatusChange: (status: string) => void;
+  onStatusChange: (status: "todo" | "in_progress" | "backlog" | "done") => void;
 }) {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -250,7 +250,10 @@ function TaskRow({
     return <img src="/icons/todo.svg" alt="To do" className="w-4 h-4" />;
   };
 
-  const statusOptions = [
+  const statusOptions: Array<{
+    value: "todo" | "in_progress" | "backlog" | "done";
+    label: string;
+  }> = [
     { value: "backlog", label: "Backlog" },
     { value: "todo", label: "To do" },
     { value: "in_progress", label: "In progress" },
