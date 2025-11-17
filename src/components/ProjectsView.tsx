@@ -169,7 +169,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         {/* To do Section */}
         {(filter === "all" || filter === "todo") && todoTasks.length > 0 && (
           <div>
-            <div className="bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-10 py-0">
+            <div className="bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-14 py-0">
               <div className="flex items-center gap-1">
                 <div className="flex items-center justify-center h-4 w-4">
                   <img src="/icons/todo.svg" alt="To do" className="w-4 h-4" />
@@ -193,7 +193,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         {/* Blocked Section */}
         {(filter === "all" || filter === "blocked") && blockedTasks.length > 0 && (
           <div>
-            <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-10 py-0 ${
+            <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-14 py-0 ${
               todoTasks.length > 0 ? "border-t" : ""
             }`}>
               <div className="flex items-center gap-1">
@@ -219,7 +219,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         {/* In Progress Section */}
         {(filter === "all" || filter === "in_progress") && inProgressTasks.length > 0 && (
           <div>
-            <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-10 py-0 ${
+            <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-14 py-0 ${
               (todoTasks.length > 0 || blockedTasks.length > 0) ? "border-t" : ""
             }`}>
               <div className="flex items-center gap-1">
@@ -245,7 +245,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         {/* Backlog Section */}
         {(filter === "all" || filter === "backlog") && backlogTasks.length > 0 && (
           <div>
-            <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-10 py-0 ${
+            <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-14 py-0 ${
               (todoTasks.length > 0 || blockedTasks.length > 0 || inProgressTasks.length > 0) ? "border-t" : ""
             }`}>
               <div className="flex items-center gap-1">
@@ -507,7 +507,7 @@ function KanbanCard({
       <div className="flex flex-col gap-1">
         <div className="flex items-start justify-between">
           <span className="text-[13px] font-medium text-[#7d7d7f]">
-            {String(task.number).padStart(2, "0")}
+            {task.number}
           </span>
           {task.assignee_avatar ? (
             <img
@@ -585,10 +585,10 @@ function TaskRow({
   ];
 
   return (
-    <div className="flex items-center justify-between h-10 px-4 hover:bg-neutral-50 group">
-      <div className="flex items-center gap-2 flex-1">
-        <span className="text-[13px] font-medium text-[#7d7d7f] leading-none">
-          {String(task.number).padStart(2, "0")}
+    <div className="flex items-center justify-between h-10 hover:bg-neutral-50 group pr-4">
+      <div className="flex items-center gap-2 flex-1 pl-4 pr-10">
+        <span className="text-[13px] font-medium text-[#7d7d7f] leading-none w-8 text-right tabular-nums">
+          {task.number}
         </span>
         <div className="relative" ref={menuRef}>
           <button
