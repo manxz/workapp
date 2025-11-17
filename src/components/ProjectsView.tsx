@@ -144,7 +144,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         {(filter === "all" || filter === "in_progress") && inProgressTasks.length > 0 && (
           <div>
             <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] py-1 ${
-              ((filter === "all" || filter === "todo") && todoTasks.length > 0) ? "border-t" : ""
+              todoTasks.length > 0 ? "border-t" : ""
             }`}>
               <div className="flex items-center gap-2 py-1 rounded-md px-10">
                 <div className="flex items-center gap-1">
@@ -170,8 +170,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         {(filter === "all" || filter === "backlog") && backlogTasks.length > 0 && (
           <div>
             <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] py-1 ${
-              (((filter === "all" || filter === "todo") && todoTasks.length > 0) || 
-               ((filter === "all" || filter === "in_progress") && inProgressTasks.length > 0)) ? "border-t" : ""
+              (todoTasks.length > 0 || inProgressTasks.length > 0) ? "border-t" : ""
             }`}>
               <div className="flex items-center gap-2 py-1 rounded-md px-10">
                 <div className="flex items-center gap-1">
