@@ -106,6 +106,22 @@ export default function Home() {
     }
   }, [selectedProject]);
 
+  // Create a default project if user has none
+  useEffect(() => {
+    const createDefaultProject = async () => {
+      if (!user || projectsLoading) return;
+      if (projects.length > 0) return; // Already has projects
+
+      // Create a default project
+      const defaultProject = await createProject("General", "Default project");
+      if (defaultProject) {
+        setSelectedProject(defaultProject.id);
+      }
+    };
+
+    createDefaultProject();
+  }, [user, projectsLoading, projects.length]);
+
   // Auto-select first project if none selected and projects are loaded
   useEffect(() => {
     if (!user || projectsLoading) return;
