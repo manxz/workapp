@@ -39,11 +39,14 @@ export default function Home() {
   }, [channels, selectedChat]);
 
   // Use chat hook for real-time messaging
-  // For channels, use "channel-{id}" as conversation_id, for DMs use the user's id
+  // For channels, use "channel-{id}" as conversation_id
+  // For DMs, create a consistent ID by sorting both user IDs
   const conversationId = selectedChat 
     ? selectedType === "channel" 
       ? `channel-${selectedChat.id}`
-      : selectedChat.id
+      : user 
+        ? [user.id, selectedChat.id].sort().join("-")
+        : ""
     : "";
   
   const { messages, sendMessage } = useChat(conversationId);
