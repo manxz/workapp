@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Sidebar from "@/components/Sidebar";
 import ChatSidebar from "@/components/ChatSidebar";
 import ChatInput from "@/components/ChatInput";
@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { useChannels } from "@/hooks/useChannels";
 import { useProjects } from "@/hooks/useProjects";
+import { useTasks } from "@/hooks/useTasks";
 import { supabase } from "@/lib/supabase";
 
 export default function Home() {
@@ -22,6 +23,7 @@ export default function Home() {
   const { users, loading: usersLoading } = useUsers();
   const { channels, loading: channelsLoading } = useChannels();
   const { projects, loading: projectsLoading, createProject, deleteProject } = useProjects();
+  const { tasks: allTasks } = useTasks(); // Load all tasks to calculate counts
   // Initialize state from localStorage if available
   const [activeView, setActiveView] = useState<"chat" | "projects">(() => {
     if (typeof window !== 'undefined') {
@@ -64,6 +66,15 @@ export default function Home() {
     }
     return "";
   });
+
+  // Calculate task counts per project
+  const taskCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allTasks.forEach((task) => {
+      counts[task.project] = (counts[task.project] || 0) + 1;
+    });
+    return counts;
+  }, [allTasks]);
 
   // Auto-select #general only if no saved state and channels are loaded
   useEffect(() => {
@@ -209,7 +220,7 @@ export default function Home() {
             setSelectedProject(project.id);
           }}
           onCreateProject={handleCreateProject}
-          onDeleteProject={handleDeleteProject}
+          taskCounts={taskCounts}
         />
       )}
       <main className={`flex flex-col h-screen flex-1 ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"}`}>
@@ -240,6 +251,7 @@ export default function Home() {
               <ProjectsView 
                 selectedProject={selectedProject}
                 projectName={projects.find(p => p.id === selectedProject)?.name || "General"}
+                onDeleteProject={handleDeleteProject}
               />
             )}
       </main>

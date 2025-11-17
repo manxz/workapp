@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus, Article, ListBullets, Kanban, CheckCircle, Prohibit } from "@phosphor-icons/react";
+import { Plus, Article, ListBullets, Kanban, CheckCircle, Prohibit, Gear } from "@phosphor-icons/react";
 import { useTasks } from "@/hooks/useTasks";
 import { useUsers } from "@/hooks/useUsers";
 import NewIssueModal from "./NewIssueModal";
+import DeleteProjectModal from "./DeleteProjectModal";
 import {
   DndContext,
   DragEndEvent,
@@ -18,28 +19,47 @@ import {
 type ProjectsViewProps = {
   selectedProject: string;
   projectName: string;
+  onDeleteProject?: (projectId: string) => void;
 };
 
-export default function ProjectsView({ selectedProject, projectName }: ProjectsViewProps) {
+export default function ProjectsView({ selectedProject, projectName, onDeleteProject }: ProjectsViewProps) {
   const { tasks, createTask, updateTask } = useTasks(selectedProject);
   const { users } = useUsers();
   const [filter, setFilter] = useState<"all" | "todo" | "in_progress" | "backlog" | "blocked">("all");
   const [showModal, setShowModal] = useState(false);
   const [view, setView] = useState<"list" | "board">("list");
+  const [showGearMenu, setShowGearMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const gearMenuRef = useRef<HTMLDivElement>(null);
 
-  // Get all non-done tasks
-  const nonDoneTasks = tasks.filter((task) => task.status !== "done");
-  
   // For list view filtering
   const filteredTasks = filter === "all" 
-    ? nonDoneTasks 
-    : nonDoneTasks.filter((task) => task.status === filter);
+    ? tasks 
+    : tasks.filter((task) => task.status === filter);
 
-  // For board view columns - always split all non-done tasks
-  const todoTasks = nonDoneTasks.filter((t) => t.status === "todo");
-  const blockedTasks = nonDoneTasks.filter((t) => t.status === "blocked");
-  const inProgressTasks = nonDoneTasks.filter((t) => t.status === "in_progress");
-  const backlogTasks = nonDoneTasks.filter((t) => t.status === "backlog");
+  // For board view columns - split tasks by status
+  const todoTasks = tasks.filter((t) => t.status === "todo");
+  const blockedTasks = tasks.filter((t) => t.status === "blocked");
+  const inProgressTasks = tasks.filter((t) => t.status === "in_progress");
+  const backlogTasks = tasks.filter((t) => t.status === "backlog");
+  const doneTasks = tasks.filter((t) => t.status === "done");
+
+  // Close gear menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (gearMenuRef.current && !gearMenuRef.current.contains(event.target as Node)) {
+        setShowGearMenu(false);
+      }
+    };
+
+    if (showGearMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showGearMenu]);
 
   const handleCreateTask = async (title: string, description: string, type: "task" | "feature") => {
     await createTask(title, type, selectedProject);
@@ -152,6 +172,31 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
               <Plus size={12} weight="regular" className="text-white" />
               <p className="text-xs font-medium text-white">New issue</p>
             </button>
+
+            {/* Gear Menu */}
+            <div className="relative" ref={gearMenuRef}>
+              <button
+                onClick={() => setShowGearMenu(!showGearMenu)}
+                className="flex items-center justify-center w-6 h-6 rounded-[7px] border border-transparent hover:bg-neutral-100 transition-colors"
+              >
+                <Gear size={16} weight="regular" className="text-black" />
+              </button>
+
+              {/* Dropdown Menu */}
+              {showGearMenu && (
+                <div className="absolute top-full right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 min-w-[160px] z-50">
+                  <button
+                    onClick={() => {
+                      setShowGearMenu(false);
+                      setShowDeleteModal(true);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Delete project
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
       </div>
 
@@ -267,17 +312,43 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
             </div>
           </div>
         )}
+
+        {/* Done Section */}
+        {(filter === "all") && doneTasks.length > 0 && (
+          <div>
+            <div className={`bg-[#fafafa] border-b border-[rgba(29,29,31,0.1)] h-8 flex items-center justify-start gap-2 px-14 py-0 ${
+              (todoTasks.length > 0 || blockedTasks.length > 0 || inProgressTasks.length > 0 || backlogTasks.length > 0) ? "border-t" : ""
+            }`}>
+              <div className="flex items-center gap-1">
+                <div className="flex items-center justify-center h-4 w-4">
+                  <CheckCircle size={16} weight="regular" className="text-black" />
+                </div>
+                <span className="text-xs font-medium text-black leading-[12px]">Done</span>
+              </div>
+              <span className="text-xs font-medium text-[#7d7d7f] leading-[12px]">{doneTasks.length}</span>
+            </div>
+            <div className="space-y-0">
+              {doneTasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  onStatusChange={(status) => updateTask(task.id, { status })}
+                />
+              ))}
+            </div>
+          </div>
+        )}
           </div>
           )
         ) : (
           /* Board View */
-          nonDoneTasks.length === 0 ? (
+          tasks.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-sm text-neutral-500">No tasks yet</p>
             </div>
           ) : (
             <KanbanBoard 
-              tasks={nonDoneTasks} 
+              tasks={tasks} 
               onStatusChange={(taskId, status) => updateTask(taskId, { status })}
             />
           )
@@ -289,6 +360,17 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onCreate={handleCreateTask}
+      />
+
+      {/* Delete Project Modal */}
+      <DeleteProjectModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={() => {
+          setShowDeleteModal(false);
+          onDeleteProject?.(selectedProject);
+        }}
+        projectName={projectName}
       />
     </div>
   );
