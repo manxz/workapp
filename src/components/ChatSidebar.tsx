@@ -1,6 +1,12 @@
 "use client";
 
-import { CaretDown, Plus } from "@phosphor-icons/react";
+import { CaretDown, Plus, Hash } from "@phosphor-icons/react";
+
+type Channel = {
+  id: string;
+  name: string;
+  hasUnread: boolean;
+};
 
 type DirectMessage = {
   id: string;
@@ -10,14 +16,20 @@ type DirectMessage = {
 };
 
 type ChatSidebarProps = {
+  channels: Channel[];
   directMessages: DirectMessage[];
   selectedId?: string;
+  selectedType?: "channel" | "dm";
+  onSelectChannel?: (channel: Channel) => void;
   onSelectChat?: (dm: DirectMessage) => void;
 };
 
 export default function ChatSidebar({
+  channels,
   directMessages,
   selectedId,
+  selectedType,
+  onSelectChannel,
   onSelectChat,
 }: ChatSidebarProps) {
   return (
@@ -27,8 +39,49 @@ export default function ChatSidebar({
         <h2 className="text-lg font-medium text-black">Chat</h2>
       </div>
 
-      {/* Direct Messages Section */}
+      {/* Channels Section */}
       <div className="flex flex-col w-full">
+        {/* Channels Header */}
+        <div className="flex items-center justify-between px-4 pr-5 py-1.5">
+          <div className="flex items-center gap-0.5">
+            <p className="text-[13px] font-semibold text-neutral-500">
+              Channels
+            </p>
+            <CaretDown size={16} className="text-neutral-500" weight="bold" />
+          </div>
+          <button className="text-neutral-500 hover:text-black transition-colors">
+            <Plus size={16} weight="bold" />
+          </button>
+        </div>
+
+        {/* Channels List */}
+        <div className="flex flex-col px-2">
+          {channels.map((channel) => (
+            <button
+              key={channel.id}
+              onClick={() => onSelectChannel?.(channel)}
+              className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors ${
+                selectedId === channel.id && selectedType === "channel"
+                  ? "bg-neutral-200"
+                  : "hover:bg-neutral-200"
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <Hash size={16} weight="bold" className="text-neutral-600" />
+                <p className="text-[13px] font-semibold text-black">
+                  {channel.name}
+                </p>
+              </div>
+              {channel.hasUnread && (
+                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Direct Messages Section */}
+      <div className="flex flex-col w-full mt-2">
         {/* Direct Messages Header */}
         <div className="flex items-center justify-between px-4 pr-5 py-1.5">
           <div className="flex items-center gap-0.5">
@@ -49,7 +102,7 @@ export default function ChatSidebar({
               key={dm.id}
               onClick={() => onSelectChat?.(dm)}
               className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors ${
-                selectedId === dm.id
+                selectedId === dm.id && selectedType === "dm"
                   ? "bg-neutral-200"
                   : "hover:bg-neutral-200"
               }`}

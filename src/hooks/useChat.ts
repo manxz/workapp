@@ -48,8 +48,8 @@ export function useChat(conversationId: string) {
   // Send a message
   const sendMessage = useCallback(
     async (text: string) => {
-      if (!user || !profile) {
-        console.error("User not authenticated");
+      if (!user || !profile || !profile.full_name) {
+        console.error("User not authenticated or profile not loaded");
         return;
       }
 
@@ -57,8 +57,8 @@ export function useChat(conversationId: string) {
         const { error } = await supabase.from("messages").insert({
           conversation_id: conversationId,
           author_id: user.id,
-          author_name: profile.full_name || "You",
-          author_avatar: profile.avatar_url || "https://i.pravatar.cc/150?img=1",
+          author_name: profile.full_name,
+          author_avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
           text: text,
         });
 
@@ -72,11 +72,17 @@ export function useChat(conversationId: string) {
 
   // Set up real-time subscription
   useEffect(() => {
+    if (!conversationId) return;
+
     loadMessages();
 
     // Subscribe to new messages
     const channel = supabase
-      .channel(`messages:${conversationId}`)
+      .channel(`room:${conversationId}`, {
+        config: {
+          broadcast: { self: true },
+        },
+      })
       .on(
         "postgres_changes",
         {
@@ -86,6 +92,7 @@ export function useChat(conversationId: string) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          console.log("Real-time message received:", payload);
           const newMsg = payload.new as any;
           const formattedMessage: Message = {
             id: newMsg.id,
@@ -94,12 +101,21 @@ export function useChat(conversationId: string) {
             timestamp: newMsg.created_at,
             text: newMsg.text,
           };
-          setMessages((prev) => [...prev, formattedMessage]);
+          setMessages((prev) => {
+            // Prevent duplicates
+            if (prev.some(m => m.id === formattedMessage.id)) {
+              return prev;
+            }
+            return [...prev, formattedMessage];
+          });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
     return () => {
+      console.log("Removing channel subscription");
       supabase.removeChannel(channel);
     };
   }, [conversationId, loadMessages]);

@@ -9,8 +9,7 @@ export default function Login() {
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-semibold text-black mb-2">Welcome to WorkApp</h1>
-          <p className="text-neutral-600">Sign in to start chatting and managing projects</p>
+          <h1 className="text-2xl font-medium text-black">WorkApp</h1>
         </div>
         
         <div className="bg-white border border-neutral-200 rounded-2xl p-8">
@@ -32,7 +31,7 @@ export default function Login() {
                 input: "font-medium text-sm",
               },
             }}
-            providers={["google", "github"]}
+            providers={[]}
             redirectTo={typeof window !== 'undefined' ? window.location.origin : undefined}
           />
         </div>
