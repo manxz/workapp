@@ -1,6 +1,7 @@
 "use client";
 
-import { House, ChatCenteredText, Cube } from "@phosphor-icons/react";
+import { House, ChatCenteredText, Cube, SignOut } from "@phosphor-icons/react";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SidebarProps = {
   activeView: "chat" | "projects";
@@ -9,10 +10,12 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ activeView, onViewChange, hasUnreadMessages = false }: SidebarProps) {
+  const { signOut } = useAuth();
+
   return (
-    <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col gap-4 h-screen items-center px-0 py-4 w-16 fixed left-0 top-0">
+    <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen items-center px-0 py-4 w-16 fixed left-0 top-0">
       {/* Logo Container - 24x24 black box with 16x16 filled house icon */}
-      <div className="flex flex-col gap-3 items-center w-full">
+      <div className="flex flex-col gap-3 items-center w-full mb-4">
         <div className="bg-black flex items-center justify-center rounded-md w-6 h-6">
           <House size={16} weight="fill" className="text-white" />
         </div>
@@ -52,6 +55,18 @@ export default function Sidebar({ activeView, onViewChange, hasUnreadMessages = 
           />
         </button>
       </div>
+
+      {/* Spacer to push sign out to bottom */}
+      <div className="flex-1" />
+
+      {/* Sign Out Button */}
+      <button
+        onClick={signOut}
+        className="flex items-center justify-center rounded-lg w-8 h-8 hover:bg-neutral-200 transition-colors"
+        title="Sign Out"
+      >
+        <SignOut size={16} weight="regular" className="text-neutral-600" />
+      </button>
     </div>
   );
 }

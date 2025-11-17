@@ -1,118 +1,112 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Message } from "@/components/ChatMessages";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
-const MESSAGES_KEY = "chat_messages";
+export type Message = {
+  id: string;
+  author: string;
+  avatar: string;
+  timestamp: string;
+  text: string;
+};
 
-export function useChat(chatId: string) {
+export function useChat(conversationId: string) {
+  const { user, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load messages for this chat from localStorage
-  const loadMessages = useCallback(() => {
+  // Load messages from Supabase
+  const loadMessages = useCallback(async () => {
     try {
-      const stored = localStorage.getItem(`${MESSAGES_KEY}_${chatId}`);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Message[];
-        
-        // Remove duplicates and fix old IDs
-        const uniqueMessages = parsed.reduce((acc: Message[], msg) => {
-          // Check if ID already exists
-          const exists = acc.some(m => m.id === msg.id);
-          if (!exists) {
-            // If old format ID (contains raw decimal), regenerate it
-            if (msg.id.includes('.') || msg.id === '1') {
-              msg.id = `migrated-${chatId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-            }
-            acc.push(msg);
-          }
-          return acc;
-        }, []);
-        
-        setMessages(uniqueMessages);
-        // Save the cleaned messages back
-        localStorage.setItem(`${MESSAGES_KEY}_${chatId}`, JSON.stringify(uniqueMessages));
-      } else {
-        // Initialize with default messages
-        const defaultMessages: Message[] = [
-          {
-            id: `default-${chatId}-1`,
-            author: "Sofia Patel",
-            avatar: "https://i.pravatar.cc/150?img=5",
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            text: "Have a good weekend guys!",
-          },
-        ];
-        setMessages(defaultMessages);
-        localStorage.setItem(
-          `${MESSAGES_KEY}_${chatId}`,
-          JSON.stringify(defaultMessages)
-        );
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      if (data) {
+        const formattedMessages: Message[] = data.map((msg) => ({
+          id: msg.id,
+          author: msg.author_name,
+          avatar: msg.author_avatar || "https://i.pravatar.cc/150?img=1",
+          timestamp: msg.created_at,
+          text: msg.text,
+        }));
+        setMessages(formattedMessages);
       }
     } catch (error) {
       console.error("Error loading messages:", error);
-      setMessages([]);
+    } finally {
+      setLoading(false);
     }
-  }, [chatId]);
-
-  // Save messages to localStorage
-  const saveMessages = useCallback(
-    (msgs: Message[]) => {
-      try {
-        localStorage.setItem(`${MESSAGES_KEY}_${chatId}`, JSON.stringify(msgs));
-      } catch (error) {
-        console.error("Error saving messages:", error);
-      }
-    },
-    [chatId]
-  );
+  }, [conversationId]);
 
   // Send a message
   const sendMessage = useCallback(
-    (text: string, author: string = "You", avatar: string = "https://i.pravatar.cc/150?img=1") => {
-      const newMessage: Message = {
-        id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-        author,
-        avatar,
-        timestamp: new Date().toISOString(),
-        text,
-      };
+    async (text: string) => {
+      if (!user || !profile) {
+        console.error("User not authenticated");
+        return;
+      }
 
-      setMessages((prev) => {
-        const updated = [...prev, newMessage];
-        saveMessages(updated);
-        return updated;
-      });
+      try {
+        const { error } = await supabase.from("messages").insert({
+          conversation_id: conversationId,
+          author_id: user.id,
+          author_name: profile.full_name || "You",
+          author_avatar: profile.avatar_url || "https://i.pravatar.cc/150?img=1",
+          text: text,
+        });
+
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
     },
-    [saveMessages]
+    [conversationId, user, profile]
   );
 
-  // Listen for changes from other tabs/windows
+  // Set up real-time subscription
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === `${MESSAGES_KEY}_${chatId}` && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          setMessages(parsed);
-        } catch (error) {
-          console.error("Error parsing storage event:", error);
-        }
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-
-    // Load initial messages
     loadMessages();
 
+    // Subscribe to new messages
+    const channel = supabase
+      .channel(`messages:${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          const formattedMessage: Message = {
+            id: newMsg.id,
+            author: newMsg.author_name,
+            avatar: newMsg.author_avatar || "https://i.pravatar.cc/150?img=1",
+            timestamp: newMsg.created_at,
+            text: newMsg.text,
+          };
+          setMessages((prev) => [...prev, formattedMessage]);
+        }
+      )
+      .subscribe();
+
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
+      supabase.removeChannel(channel);
     };
-  }, [chatId, loadMessages]);
+  }, [conversationId, loadMessages]);
 
   return {
     messages,
     sendMessage,
+    loading,
   };
 }
-

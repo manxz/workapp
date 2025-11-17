@@ -6,9 +6,12 @@ import ChatSidebar from "@/components/ChatSidebar";
 import ChatInput from "@/components/ChatInput";
 import ChatHeader from "@/components/ChatHeader";
 import ChatMessages from "@/components/ChatMessages";
+import Login from "@/components/Login";
 import { useChat } from "@/hooks/useChat";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
+  const { user, loading } = useAuth();
   const [activeView, setActiveView] = useState<"chat" | "projects">("chat");
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [selectedChat, setSelectedChat] = useState({
@@ -19,6 +22,20 @@ export default function Home() {
 
   // Use chat hook for real-time messaging
   const { messages, sendMessage } = useChat(selectedChat.id);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-neutral-600">Loading...</p>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!user) {
+    return <Login />;
+  }
 
   // Sample direct messages data
   const directMessages = [
