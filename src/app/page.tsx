@@ -14,12 +14,14 @@ import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
 import { useChannels } from "@/hooks/useChannels";
+import { useProjects } from "@/hooks/useProjects";
 import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const { user, profile, loading } = useAuth();
   const { users, loading: usersLoading } = useUsers();
   const { channels, loading: channelsLoading } = useChannels();
+  const { projects, loading: projectsLoading, createProject, deleteProject } = useProjects();
   // Initialize state from localStorage if available
   const [activeView, setActiveView] = useState<"chat" | "projects">(() => {
     if (typeof window !== 'undefined') {
@@ -58,27 +60,9 @@ export default function Home() {
   const [selectedProject, setSelectedProject] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem("selectedProject");
-      return saved || "General";
+      return saved || "";
     }
-    return "General";
-  });
-
-  // Projects state with localStorage persistence
-  const [projects, setProjects] = useState<Array<{
-    id: string;
-    name: string;
-  }>>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem("projects");
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    }
-    return [
-      { id: "General", name: "Chat" },
-      { id: "Field Workers", name: "Field Workers" },
-      { id: "Project Manager", name: "Project Manager" },
-    ];
+    return "";
   });
 
   // Auto-select #general only if no saved state and channels are loaded
@@ -122,12 +106,15 @@ export default function Home() {
     }
   }, [selectedProject]);
 
-  // Save projects to localStorage
+  // Auto-select first project if none selected and projects are loaded
   useEffect(() => {
-    if (projects.length > 0) {
-      localStorage.setItem("projects", JSON.stringify(projects));
-    }
-  }, [projects]);
+    if (!user || projectsLoading) return;
+    if (selectedProject) return; // Already have a selection
+    if (projects.length === 0) return; // No projects yet
+
+    // Select the first project
+    setSelectedProject(projects[0].id);
+  }, [projects, user, projectsLoading, selectedProject]);
 
   // Use chat hook for real-time messaging
   // For channels, use "channel-{id}" as conversation_id
@@ -162,13 +149,11 @@ export default function Home() {
   }
 
   // Handle creating a new project
-  const handleCreateProject = (name: string, description: string) => {
-    const newProject = {
-      id: name, // Use name as ID for simplicity (could use UUID in production)
-      name,
-    };
-    setProjects([...projects, newProject]);
-    setSelectedProject(newProject.id);
+  const handleCreateProject = async (name: string, description: string) => {
+    const newProject = await createProject(name, description);
+    if (newProject) {
+      setSelectedProject(newProject.id);
+    }
   };
 
   // Handle deleting a project
@@ -178,30 +163,18 @@ export default function Home() {
       return;
     }
 
-    try {
-      // Delete all tasks associated with this project from Supabase
-      const { error } = await supabase
-        .from("tasks")
-        .delete()
-        .eq("project", projectId);
-
-      if (error) {
-        console.error("Error deleting tasks:", error);
-        alert(`Failed to delete project tasks: ${error.message || "Unknown error"}`);
-        return;
-      }
-
-      // Remove project from state
-      const updatedProjects = projects.filter(p => p.id !== projectId);
-      setProjects(updatedProjects);
-
+    const success = await deleteProject(projectId);
+    
+    if (success) {
       // Switch to the first remaining project if the deleted project was selected
-      if (projectId === selectedProject && updatedProjects.length > 0) {
-        setSelectedProject(updatedProjects[0].id);
+      if (projectId === selectedProject && projects.length > 1) {
+        const remainingProjects = projects.filter(p => p.id !== projectId);
+        if (remainingProjects.length > 0) {
+          setSelectedProject(remainingProjects[0].id);
+        }
       }
-    } catch (error: any) {
-      console.error("Error deleting project:", error);
-      alert(`Failed to delete project: ${error?.message || "Unknown error"}`);
+    } else {
+      alert("Failed to delete project");
     }
   };
 
