@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Chat Data</title>
+</head>
+<body>
+    <h1>Clear Chat Data</h1>
+    <button onclick="clearChat()">Clear All Chat Messages</button>
+    <p id="result"></p>
+    <script>
+        function clearChat() {
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.startsWith('chat_messages_')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            document.getElementById('result').textContent = 'Chat messages cleared! Refresh your app.';
+        }
+    </script>
+</body>
+</html>
