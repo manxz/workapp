@@ -159,6 +159,11 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
       <div className="flex-1 overflow-y-auto">
         {view === "list" ? (
           /* List View */
+          filteredTasks.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-sm text-neutral-500">No tasks yet</p>
+            </div>
+          ) : (
           <div>
 
         {/* To do Section */}
@@ -262,19 +267,20 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
             </div>
           </div>
         )}
-
-        {filteredTasks.length === 0 && (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-neutral-500">No tasks yet</p>
           </div>
-        )}
-          </div>
+          )
         ) : (
           /* Board View */
-          <KanbanBoard 
-            tasks={nonDoneTasks} 
-            onStatusChange={(taskId, status) => updateTask(taskId, { status })}
-          />
+          nonDoneTasks.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-sm text-neutral-500">No tasks yet</p>
+            </div>
+          ) : (
+            <KanbanBoard 
+              tasks={nonDoneTasks} 
+              onStatusChange={(taskId, status) => updateTask(taskId, { status })}
+            />
+          )
         )}
       </div>
 
@@ -446,11 +452,11 @@ function KanbanColumn({
   return (
     <div 
       ref={setNodeRef} 
-      className={`flex-1 flex flex-col gap-2 min-w-0 transition-colors ${
+      className={`flex-1 flex flex-col min-w-0 transition-colors ${
         isOver ? "bg-[#f0f0f0]" : "bg-[#fafafa]"
       }`}
     >
-      <div className="flex h-8 items-center justify-start gap-2 px-4 py-0 border-b border-[rgba(29,29,31,0.1)]">
+      <div className="flex h-8 items-center justify-start gap-2 px-4 py-0 border-b border-[rgba(29,29,31,0.1)] flex-shrink-0">
         <div className="flex items-center gap-1">
           <div className="flex items-center justify-center h-4 w-4">
             {icon}
@@ -459,7 +465,7 @@ function KanbanColumn({
         </div>
         <span className="text-xs font-medium text-[#7d7d7f] leading-[12px]">{tasks.length}</span>
       </div>
-      <div className="flex flex-col gap-2 px-2 py-2 min-h-[100px]">
+      <div className="flex flex-col gap-2 px-2 py-2 overflow-y-auto flex-1">
         {tasks.map((task) => (
           task.id !== activeId && <KanbanCard key={task.id} task={task} onStatusChange={onStatusChange} />
         ))}

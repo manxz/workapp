@@ -10,41 +10,9 @@ export type Message = {
   avatar: string;
   timestamp: string;
   text: string;
-  author_id?: string;
 };
 
-// Request notification permission
-const requestNotificationPermission = async () => {
-  if (typeof window === "undefined" || !("Notification" in window)) {
-    return false;
-  }
-  
-  if (Notification.permission === "granted") {
-    return true;
-  }
-  
-  if (Notification.permission !== "denied") {
-    const permission = await Notification.requestPermission();
-    return permission === "granted";
-  }
-  
-  return false;
-};
-
-// Show notification
-const showNotification = (title: string, body: string, icon?: string) => {
-  if (typeof window === "undefined" || Notification.permission !== "granted") {
-    return;
-  }
-  
-  new Notification(title, {
-    body,
-    icon: icon || "/favicon.ico",
-    badge: "/favicon.ico",
-  });
-};
-
-export function useChat(conversationId: string, onNewMessage?: (message: Message) => void) {
+export function useChat(conversationId: string) {
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +35,6 @@ export function useChat(conversationId: string, onNewMessage?: (message: Message
           avatar: msg.author_avatar || "https://i.pravatar.cc/150?img=1",
           timestamp: msg.created_at,
           text: msg.text,
-          author_id: msg.author_id,
         }));
         setMessages(formattedMessages);
       }
@@ -108,9 +75,6 @@ export function useChat(conversationId: string, onNewMessage?: (message: Message
     if (!conversationId) return;
 
     loadMessages();
-    
-    // Request notification permission on mount
-    requestNotificationPermission();
 
     // Subscribe to new messages
     const channel = supabase
@@ -136,21 +100,7 @@ export function useChat(conversationId: string, onNewMessage?: (message: Message
             avatar: newMsg.author_avatar || "https://i.pravatar.cc/150?img=1",
             timestamp: newMsg.created_at,
             text: newMsg.text,
-            author_id: newMsg.author_id,
           };
-          
-          // Show notification if message is from someone else
-          if (user && newMsg.author_id !== user.id) {
-            const isChannel = conversationId.startsWith("channel-");
-            const title = isChannel ? `#${newMsg.author_name}` : newMsg.author_name;
-            showNotification(title, newMsg.text, newMsg.author_avatar);
-            
-            // Notify parent component
-            if (onNewMessage) {
-              onNewMessage(formattedMessage);
-            }
-          }
-          
           setMessages((prev) => {
             // Prevent duplicates
             if (prev.some(m => m.id === formattedMessage.id)) {
@@ -168,7 +118,7 @@ export function useChat(conversationId: string, onNewMessage?: (message: Message
       console.log("Removing channel subscription");
       supabase.removeChannel(channel);
     };
-  }, [conversationId, loadMessages, user, onNewMessage]);
+  }, [conversationId, loadMessages]);
 
   return {
     messages,
