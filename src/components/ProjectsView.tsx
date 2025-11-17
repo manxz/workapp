@@ -27,18 +27,19 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
   const [showModal, setShowModal] = useState(false);
   const [view, setView] = useState<"list" | "board">("list");
 
-  const filteredTasks = tasks.filter((task) => {
-    if (filter === "all") return task.status !== "done";
-    return task.status === filter;
-  });
+  // Filter tasks for list view
+  const getFilteredTasks = () => {
+    const nonDoneTasks = tasks.filter((task) => task.status !== "done");
+    if (view === "board" || filter === "all") return nonDoneTasks;
+    return nonDoneTasks.filter((task) => task.status === filter);
+  };
 
-  // For list view, use filtered tasks. For board view, show all non-done tasks
-  const tasksToDisplay = view === "list" ? filteredTasks : tasks.filter((t) => t.status !== "done");
+  const filteredTasks = getFilteredTasks();
 
-  const todoTasks = tasksToDisplay.filter((t) => t.status === "todo");
-  const blockedTasks = tasksToDisplay.filter((t) => t.status === "blocked");
-  const inProgressTasks = tasksToDisplay.filter((t) => t.status === "in_progress");
-  const backlogTasks = tasksToDisplay.filter((t) => t.status === "backlog");
+  const todoTasks = filteredTasks.filter((t) => t.status === "todo");
+  const blockedTasks = filteredTasks.filter((t) => t.status === "blocked");
+  const inProgressTasks = filteredTasks.filter((t) => t.status === "in_progress");
+  const backlogTasks = filteredTasks.filter((t) => t.status === "backlog");
 
   const handleCreateTask = async (title: string, description: string, type: "task" | "feature") => {
     await createTask(title, type, selectedProject);
@@ -262,7 +263,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
           </div>
         )}
 
-        {tasksToDisplay.length === 0 && (
+        {filteredTasks.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-neutral-500">No tasks yet</p>
           </div>
@@ -271,7 +272,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         ) : (
           /* Board View */
           <KanbanBoard 
-            tasks={tasksToDisplay} 
+            tasks={filteredTasks} 
             onStatusChange={(taskId, status) => updateTask(taskId, { status })}
           />
         )}
@@ -459,12 +460,6 @@ function KanbanColumn({
         <span className="text-xs font-medium text-[#7d7d7f] leading-[12px]">{tasks.length}</span>
       </div>
       <div className="flex flex-col gap-2 px-2 py-2 min-h-[100px]">
-        {/* Show placeholder at the top when hovering over this column */}
-        {isOver && activeId && (
-          <div className="border-2 border-dashed border-[rgba(29,29,31,0.3)] rounded-xl p-2 flex flex-col gap-4 bg-white/50" style={{ height: '120px' }}>
-            {/* Empty placeholder matching card dimensions */}
-          </div>
-        )}
         {tasks.map((task) => (
           task.id !== activeId && <KanbanCard key={task.id} task={task} onStatusChange={onStatusChange} />
         ))}
