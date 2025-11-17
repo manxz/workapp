@@ -140,7 +140,22 @@ export default function Home() {
         : ""
     : "";
   
-  const { messages, sendMessage } = useChat(conversationId);
+  // Handle new message notification
+  const handleNewMessage = () => {
+    // Only show unread indicator if not in chat view
+    if (activeView !== "chat") {
+      setHasUnreadMessages(true);
+    }
+  };
+  
+  // Clear unread messages when viewing chat
+  useEffect(() => {
+    if (activeView === "chat") {
+      setHasUnreadMessages(false);
+    }
+  }, [activeView]);
+  
+  const { messages, sendMessage } = useChat(conversationId, handleNewMessage);
 
   // Show loading state while auth is initializing
   if (loading) {
