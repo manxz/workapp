@@ -32,10 +32,13 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
     return task.status === filter;
   });
 
-  const todoTasks = filteredTasks.filter((t) => t.status === "todo");
-  const blockedTasks = filteredTasks.filter((t) => t.status === "blocked");
-  const inProgressTasks = filteredTasks.filter((t) => t.status === "in_progress");
-  const backlogTasks = filteredTasks.filter((t) => t.status === "backlog");
+  // For list view, use filtered tasks. For board view, show all non-done tasks
+  const tasksToDisplay = view === "list" ? filteredTasks : tasks.filter((t) => t.status !== "done");
+
+  const todoTasks = tasksToDisplay.filter((t) => t.status === "todo");
+  const blockedTasks = tasksToDisplay.filter((t) => t.status === "blocked");
+  const inProgressTasks = tasksToDisplay.filter((t) => t.status === "in_progress");
+  const backlogTasks = tasksToDisplay.filter((t) => t.status === "backlog");
 
   const handleCreateTask = async (title: string, description: string, type: "task" | "feature") => {
     await createTask(title, type, selectedProject);
@@ -259,7 +262,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
           </div>
         )}
 
-        {filteredTasks.length === 0 && (
+        {tasksToDisplay.length === 0 && (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-neutral-500">No tasks yet</p>
           </div>
@@ -268,7 +271,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         ) : (
           /* Board View */
           <KanbanBoard 
-            tasks={filteredTasks} 
+            tasks={tasksToDisplay} 
             onStatusChange={(taskId, status) => updateTask(taskId, { status })}
           />
         )}
