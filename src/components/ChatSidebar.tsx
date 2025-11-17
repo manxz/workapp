@@ -57,14 +57,14 @@ export default function ChatSidebar({
         {/* Channels List */}
         <div className="flex flex-col px-2">
           {channels.map((channel) => (
-            <button
-              key={channel.id}
-              onClick={() => onSelectChannel?.(channel)}
-              className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors ${
-                selectedId === channel.id && selectedType === "channel"
-                  ? "bg-neutral-200"
-                  : "hover:bg-neutral-200"
-              }`}
+              <button
+                key={channel.id}
+                onClick={() => onSelectChannel?.(channel)}
+                className={`flex items-center justify-between px-2 py-1.5 rounded-[7px] transition-colors ${
+                  selectedId === channel.id && selectedType === "channel"
+                    ? "bg-neutral-200"
+                    : "hover:bg-neutral-200"
+                }`}
             >
               <div className="flex items-center gap-1.5">
                 <Hash size={16} weight="bold" className="text-neutral-600" />
@@ -98,14 +98,14 @@ export default function ChatSidebar({
         {/* Direct Messages List */}
         <div className="flex flex-col px-2">
           {directMessages.map((dm) => (
-            <button
-              key={dm.id}
-              onClick={() => onSelectChat?.(dm)}
-              className={`flex items-center justify-between px-2 py-1.5 rounded-lg transition-colors ${
-                selectedId === dm.id && selectedType === "dm"
-                  ? "bg-neutral-200"
-                  : "hover:bg-neutral-200"
-              }`}
+              <button
+                key={dm.id}
+                onClick={() => onSelectChat?.(dm)}
+                className={`flex items-center justify-between px-2 py-1.5 rounded-[7px] transition-colors ${
+                  selectedId === dm.id && selectedType === "dm"
+                    ? "bg-neutral-200"
+                    : "hover:bg-neutral-200"
+                }`}
             >
               <div className="flex items-center gap-1.5">
                 <img

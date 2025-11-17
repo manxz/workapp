@@ -59,7 +59,7 @@ export default function ProfileSetup() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your full name"
-                className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
+                className="w-full px-3 py-2 border border-neutral-300 rounded-[7px] text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                 disabled={loading}
                 autoFocus
               />
@@ -72,7 +72,7 @@ export default function ProfileSetup() {
             <button
               type="submit"
               disabled={loading || !name.trim()}
-              className={`w-full py-2 px-4 rounded-lg text-sm font-medium text-white transition-colors ${
+              className={`w-full py-2 px-4 rounded-[7px] text-sm font-medium text-white transition-colors ${
                 loading || !name.trim()
                   ? "bg-neutral-300 cursor-not-allowed"
                   : "bg-black hover:bg-neutral-800"
