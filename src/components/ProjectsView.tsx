@@ -27,19 +27,19 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
   const [showModal, setShowModal] = useState(false);
   const [view, setView] = useState<"list" | "board">("list");
 
-  // Filter tasks for list view
-  const getFilteredTasks = () => {
-    const nonDoneTasks = tasks.filter((task) => task.status !== "done");
-    if (view === "board" || filter === "all") return nonDoneTasks;
-    return nonDoneTasks.filter((task) => task.status === filter);
-  };
+  // Get all non-done tasks
+  const nonDoneTasks = tasks.filter((task) => task.status !== "done");
+  
+  // For list view filtering
+  const filteredTasks = filter === "all" 
+    ? nonDoneTasks 
+    : nonDoneTasks.filter((task) => task.status === filter);
 
-  const filteredTasks = getFilteredTasks();
-
-  const todoTasks = filteredTasks.filter((t) => t.status === "todo");
-  const blockedTasks = filteredTasks.filter((t) => t.status === "blocked");
-  const inProgressTasks = filteredTasks.filter((t) => t.status === "in_progress");
-  const backlogTasks = filteredTasks.filter((t) => t.status === "backlog");
+  // For board view columns - always split all non-done tasks
+  const todoTasks = nonDoneTasks.filter((t) => t.status === "todo");
+  const blockedTasks = nonDoneTasks.filter((t) => t.status === "blocked");
+  const inProgressTasks = nonDoneTasks.filter((t) => t.status === "in_progress");
+  const backlogTasks = nonDoneTasks.filter((t) => t.status === "backlog");
 
   const handleCreateTask = async (title: string, description: string, type: "task" | "feature") => {
     await createTask(title, type, selectedProject);
@@ -272,7 +272,7 @@ export default function ProjectsView({ selectedProject, projectName }: ProjectsV
         ) : (
           /* Board View */
           <KanbanBoard 
-            tasks={filteredTasks} 
+            tasks={nonDoneTasks} 
             onStatusChange={(taskId, status) => updateTask(taskId, { status })}
           />
         )}
