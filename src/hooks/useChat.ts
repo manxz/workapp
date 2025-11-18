@@ -88,6 +88,9 @@ export function useChat(conversationId: string) {
   useEffect(() => {
     if (!conversationId) return;
 
+    // Reset typing users when switching conversations
+    setTypingUsers([]);
+
     loadMessages();
 
     // Subscribe to new messages and typing events
