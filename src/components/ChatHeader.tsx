@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { DotsThree } from "@phosphor-icons/react";
 
 type ChatHeaderProps = {
@@ -7,7 +8,7 @@ type ChatHeaderProps = {
   avatar?: string;
 };
 
-export default function ChatHeader({ name, avatar }: ChatHeaderProps) {
+function ChatHeader({ name, avatar }: ChatHeaderProps) {
   return (
     <div className="sticky top-0 z-10 border-b border-neutral-200 px-4 h-14 flex items-center justify-between bg-white">
       <div className="flex items-center gap-2">
@@ -27,3 +28,4 @@ export default function ChatHeader({ name, avatar }: ChatHeaderProps) {
   );
 }
 
+export default memo(ChatHeader);

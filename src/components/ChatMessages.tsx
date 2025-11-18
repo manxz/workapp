@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 
 export type Message = {
   id: string;
@@ -14,7 +14,7 @@ type ChatMessagesProps = {
   messages: Message[];
 };
 
-export default function ChatMessages({ messages }: ChatMessagesProps) {
+function ChatMessages({ messages }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -111,3 +111,4 @@ export default function ChatMessages({ messages }: ChatMessagesProps) {
   );
 }
 
+export default memo(ChatMessages);

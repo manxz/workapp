@@ -81,29 +81,8 @@ export function useChat(conversationId: string) {
     [conversationId, user, profile]
   );
 
-  // Broadcast typing event
-  const broadcastTyping = useCallback(() => {
-    if (!user || !profile || !profile.full_name || !conversationId) return;
-    
-    const channel = supabase.channel(`room:${conversationId}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'typing',
-      payload: { userId: user.id, userName: profile.full_name },
-    });
-  }, [conversationId, user, profile]);
-
-  // Broadcast stop typing event
-  const broadcastStopTyping = useCallback(() => {
-    if (!user || !conversationId) return;
-    
-    const channel = supabase.channel(`room:${conversationId}`);
-    channel.send({
-      type: 'broadcast',
-      event: 'stop-typing',
-      payload: { userId: user.id },
-    });
-  }, [conversationId, user]);
+  // Store channel ref to reuse for broadcasts
+  const channelRef = useRef<any>(null);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -117,7 +96,11 @@ export function useChat(conversationId: string) {
         config: {
           broadcast: { self: false },
         },
-      })
+      });
+    
+    channelRef.current = channel;
+    
+    channel
       .on('broadcast', { event: 'typing' }, (payload) => {
         const { userId, userName } = payload.payload;
         if (userId !== user?.id) {
@@ -163,7 +146,6 @@ export function useChat(conversationId: string) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          console.log("Message received");
           const newMsg = payload.new as any;
           const formattedMessage: Message = {
             id: newMsg.id,
@@ -175,7 +157,6 @@ export function useChat(conversationId: string) {
           
           // Show browser notification if message is from someone else
           if (user && newMsg.author_id !== user.id) {
-            console.log("Attempting notification");
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               // Show notification if tab is hidden or window doesn't have focus
               const shouldNotify = document.visibilityState === 'hidden' || !document.hasFocus();
@@ -224,6 +205,28 @@ export function useChat(conversationId: string) {
       supabase.removeChannel(channel);
     };
   }, [conversationId, loadMessages, user]);
+
+  // Broadcast typing event - uses channelRef to avoid creating new channels
+  const broadcastTyping = useCallback(() => {
+    if (!user || !profile || !profile.full_name || !channelRef.current) return;
+    
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { userId: user.id, userName: profile.full_name },
+    });
+  }, [user, profile]);
+
+  // Broadcast stop typing event - uses channelRef to avoid creating new channels
+  const broadcastStopTyping = useCallback(() => {
+    if (!user || !channelRef.current) return;
+    
+    channelRef.current.send({
+      type: 'broadcast',
+      event: 'stop-typing',
+      payload: { userId: user.id },
+    });
+  }, [user]);
 
   return {
     messages,

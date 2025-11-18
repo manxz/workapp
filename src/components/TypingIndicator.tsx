@@ -1,10 +1,12 @@
 "use client";
 
+import { memo } from "react";
+
 type TypingIndicatorProps = {
   typingUsers: { userId: string; userName: string }[];
 };
 
-export default function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
+function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
   if (typingUsers.length === 0) {
     return <div className="px-7 h-5 flex items-center" />;
   }
@@ -44,3 +46,4 @@ export default function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
   );
 }
 
+export default memo(TypingIndicator);

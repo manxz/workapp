@@ -26,13 +26,7 @@ export default function ProfileSetup() {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       const avatarUrl = authUser?.user_metadata?.avatar_url || null;
 
-      console.log("Attempting to upsert profile:", {
-        id: user?.id,
-        full_name: name.trim(),
-        avatar_url: avatarUrl
-      });
-
-      const { data, error: upsertError } = await supabase
+      const { error: upsertError } = await supabase
         .from("profiles")
         .upsert({ 
           id: user?.id,
@@ -43,10 +37,8 @@ export default function ProfileSetup() {
         })
         .select();
 
-      console.log("Upsert result:", { data, error: upsertError });
-
       if (upsertError) {
-        console.error("Upsert error details:", JSON.stringify(upsertError, null, 2));
+        console.error("Error updating profile:", upsertError);
         throw upsertError;
       }
 
@@ -54,7 +46,6 @@ export default function ProfileSetup() {
       window.location.reload();
     } catch (err: any) {
       console.error("Error updating profile:", err);
-      console.error("Error stringified:", JSON.stringify(err, null, 2));
       setError(err.message || err.hint || "Failed to update profile");
     } finally {
       setLoading(false);
