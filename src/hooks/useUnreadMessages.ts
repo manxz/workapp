@@ -57,9 +57,11 @@ export function useUnreadMessages() {
           table: "messages",
         },
         (payload) => {
+          console.log("New message received for unread tracking:", payload);
           const newMsg = payload.new as any;
           // Only mark as unread if message is from someone else
           if (newMsg.author_id !== user.id) {
+            console.log("Marking as unread:", newMsg.conversation_id);
             markAsUnread(newMsg.conversation_id);
           }
         }

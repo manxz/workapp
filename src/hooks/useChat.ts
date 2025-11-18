@@ -113,9 +113,14 @@ export function useChat(conversationId: string) {
           
           // Show browser notification if message is from someone else
           if (user && newMsg.author_id !== user.id) {
+            console.log("Message from someone else, checking notification permission...");
+            console.log("Permission:", typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'N/A');
+            console.log("Window has focus:", document.hasFocus());
+            
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               // Show notification if window is not focused or minimized
               if (!document.hasFocus()) {
+                console.log("Showing notification for:", formattedMessage.author);
                 const notification = new Notification(formattedMessage.author, {
                   body: formattedMessage.text,
                   icon: formattedMessage.avatar,
@@ -127,7 +132,11 @@ export function useChat(conversationId: string) {
                   window.focus();
                   notification.close();
                 };
+              } else {
+                console.log("Window has focus, not showing notification");
               }
+            } else {
+              console.log("Notification not available or permission not granted");
             }
           }
           
