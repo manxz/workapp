@@ -101,7 +101,6 @@ export function useChat(conversationId: string) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          console.log("Real-time message received:", payload);
           const newMsg = payload.new as any;
           const formattedMessage: Message = {
             id: newMsg.id,
@@ -113,17 +112,11 @@ export function useChat(conversationId: string) {
           
           // Show browser notification if message is from someone else
           if (user && newMsg.author_id !== user.id) {
-            console.log("Message from someone else, checking notification permission...");
-            console.log("Permission:", typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'N/A');
-            console.log("Document visibility:", document.visibilityState);
-            console.log("Window has focus:", document.hasFocus());
-            
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               // Show notification if tab is hidden or window doesn't have focus
               const shouldNotify = document.visibilityState === 'hidden' || !document.hasFocus();
               
               if (shouldNotify) {
-                console.log("Showing notification for:", formattedMessage.author);
                 try {
                   const notification = new Notification(formattedMessage.author, {
                     body: formattedMessage.text,
@@ -132,34 +125,19 @@ export function useChat(conversationId: string) {
                     requireInteraction: false,
                   });
                   
-                  console.log("Notification created successfully:", notification);
-                  
                   // Focus window when notification is clicked
                   notification.onclick = () => {
-                    console.log("Notification clicked");
                     window.focus();
                     notification.close();
-                  };
-                  
-                  notification.onshow = () => {
-                    console.log("Notification shown");
                   };
                   
                   notification.onerror = (error) => {
                     console.error("Notification error:", error);
                   };
-                  
-                  notification.onclose = () => {
-                    console.log("Notification closed");
-                  };
                 } catch (error) {
                   console.error("Error creating notification:", error);
                 }
-              } else {
-                console.log("Tab is visible and focused, not showing notification");
               }
-            } else {
-              console.log("Notification not available or permission not granted");
             }
           }
           
@@ -172,12 +150,9 @@ export function useChat(conversationId: string) {
           });
         }
       )
-      .subscribe((status) => {
-        console.log("Subscription status:", status);
-      });
+      .subscribe();
 
     return () => {
-      console.log("Removing channel subscription");
       supabase.removeChannel(channel);
     };
   }, [conversationId, loadMessages, user]);
