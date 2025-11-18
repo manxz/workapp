@@ -124,18 +124,37 @@ export function useChat(conversationId: string) {
               
               if (shouldNotify) {
                 console.log("Showing notification for:", formattedMessage.author);
-                const notification = new Notification(formattedMessage.author, {
-                  body: formattedMessage.text,
-                  icon: formattedMessage.avatar,
-                  tag: conversationId, // Replaces previous notification from same conversation
-                  requireInteraction: false,
-                });
-                
-                // Focus window when notification is clicked
-                notification.onclick = () => {
-                  window.focus();
-                  notification.close();
-                };
+                try {
+                  const notification = new Notification(formattedMessage.author, {
+                    body: formattedMessage.text,
+                    icon: formattedMessage.avatar,
+                    tag: conversationId,
+                    requireInteraction: false,
+                  });
+                  
+                  console.log("Notification created successfully:", notification);
+                  
+                  // Focus window when notification is clicked
+                  notification.onclick = () => {
+                    console.log("Notification clicked");
+                    window.focus();
+                    notification.close();
+                  };
+                  
+                  notification.onshow = () => {
+                    console.log("Notification shown");
+                  };
+                  
+                  notification.onerror = (error) => {
+                    console.error("Notification error:", error);
+                  };
+                  
+                  notification.onclose = () => {
+                    console.log("Notification closed");
+                  };
+                } catch (error) {
+                  console.error("Error creating notification:", error);
+                }
               } else {
                 console.log("Tab is visible and focused, not showing notification");
               }
