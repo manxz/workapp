@@ -17,6 +17,15 @@ export function useChat(conversationId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Request notification permission on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
+
   // Load messages from Supabase
   const loadMessages = useCallback(async () => {
     try {
@@ -101,6 +110,27 @@ export function useChat(conversationId: string) {
             timestamp: newMsg.created_at,
             text: newMsg.text,
           };
+          
+          // Show browser notification if message is from someone else
+          if (user && newMsg.author_id !== user.id) {
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              // Show notification if window is not focused or minimized
+              if (!document.hasFocus()) {
+                const notification = new Notification(formattedMessage.author, {
+                  body: formattedMessage.text,
+                  icon: formattedMessage.avatar,
+                  tag: conversationId, // Replaces previous notification from same conversation
+                });
+                
+                // Focus window when notification is clicked
+                notification.onclick = () => {
+                  window.focus();
+                  notification.close();
+                };
+              }
+            }
+          }
+          
           setMessages((prev) => {
             // Prevent duplicates
             if (prev.some(m => m.id === formattedMessage.id)) {
@@ -118,7 +148,7 @@ export function useChat(conversationId: string) {
       console.log("Removing channel subscription");
       supabase.removeChannel(channel);
     };
-  }, [conversationId, loadMessages]);
+  }, [conversationId, loadMessages, user]);
 
   return {
     messages,

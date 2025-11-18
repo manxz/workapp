@@ -1,6 +1,7 @@
 "use client";
 
 import { CaretDown, Plus, Hash } from "@phosphor-icons/react";
+import NotificationPrompt from "./NotificationPrompt";
 
 type Channel = {
   id: string;
@@ -33,11 +34,12 @@ export default function ChatSidebar({
   onSelectChat,
 }: ChatSidebarProps) {
   return (
-    <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col gap-2 h-screen w-[200px] py-4 fixed left-16 top-0">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-1.5 h-6">
-        <h2 className="text-lg font-medium text-black">Chat</h2>
-      </div>
+    <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col justify-between h-screen w-[200px] py-4 fixed left-16 top-0">
+      <div className="flex flex-col gap-2">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-1.5 h-6">
+          <h2 className="text-lg font-medium text-black">Chat</h2>
+        </div>
 
       {/* Channels Section */}
       <div className="flex flex-col w-full">
@@ -124,6 +126,10 @@ export default function ChatSidebar({
           ))}
         </div>
       </div>
+      </div>
+
+      {/* Notification Prompt */}
+      <NotificationPrompt />
     </div>
   );
 }

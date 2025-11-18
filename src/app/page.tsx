@@ -16,6 +16,7 @@ import { useUsers } from "@/hooks/useUsers";
 import { useChannels } from "@/hooks/useChannels";
 import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { supabase } from "@/lib/supabase";
 
 export default function Home() {
@@ -24,6 +25,7 @@ export default function Home() {
   const { channels, loading: channelsLoading } = useChannels();
   const { projects, loading: projectsLoading, createProject, deleteProject } = useProjects();
   const { tasks: allTasks } = useTasks(); // Load all tasks to calculate counts
+  const { hasUnread, markAsRead } = useUnreadMessages();
   // Initialize state from localStorage if available
   const [activeView, setActiveView] = useState<"chat" | "projects">(() => {
     if (typeof window !== 'undefined') {
@@ -198,15 +200,25 @@ export default function Home() {
       />
       {activeView === "chat" && (
         <ChatSidebar
-          channels={channels}
-          directMessages={users}
+          channels={channels.map(c => ({ 
+            ...c, 
+            hasUnread: hasUnread(`channel-${c.id}`) 
+          }))}
+          directMessages={users.map(u => ({ 
+            ...u, 
+            hasUnread: user ? hasUnread([user.id, u.id].sort().join("-")) : false
+          }))}
           selectedId={selectedChat?.id}
           selectedType={selectedType}
           onSelectChannel={(channel) => {
+            markAsRead(`channel-${channel.id}`);
             setSelectedChat({ id: channel.id, name: channel.name });
             setSelectedType("channel");
           }}
           onSelectChat={(dm) => {
+            if (user) {
+              markAsRead([user.id, dm.id].sort().join("-"));
+            }
             setSelectedChat({ id: dm.id, name: dm.name, avatar: dm.avatar });
             setSelectedType("dm");
           }}
