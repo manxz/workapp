@@ -11,6 +11,7 @@ import Login from "@/components/Login";
 import ProfileSetup from "@/components/ProfileSetup";
 import ProjectsView from "@/components/ProjectsView";
 import ProjectsSidebar from "@/components/ProjectsSidebar";
+import NotificationPrompt from "@/components/NotificationPrompt";
 import { useChat } from "@/hooks/useChat";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUsers } from "@/hooks/useUsers";
@@ -255,6 +256,7 @@ export default function Home() {
                   />
                   <TypingIndicator typingUsers={typingUsers} />
                 </div>
+                <NotificationPrompt />
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center">

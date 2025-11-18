@@ -70,7 +70,7 @@ export default function ChatSidebar({
             >
               <div className="flex items-center gap-1.5">
                 <Hash size={16} weight="bold" className="text-neutral-600" />
-                <p className="text-[13px] font-semibold text-black">
+                <p className={`text-[13px] text-black ${channel.hasUnread ? 'font-semibold' : 'font-medium'}`}>
                   {channel.name}
                 </p>
               </div>
@@ -115,7 +115,7 @@ export default function ChatSidebar({
                   alt={dm.name}
                   className="w-[18px] h-[18px] rounded-full object-cover"
                 />
-                <p className="text-[13px] font-semibold text-black">
+                <p className={`text-[13px] text-black ${dm.hasUnread ? 'font-semibold' : 'font-medium'}`}>
                   {dm.name}
                 </p>
               </div>
