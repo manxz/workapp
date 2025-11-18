@@ -115,16 +115,20 @@ export function useChat(conversationId: string) {
           if (user && newMsg.author_id !== user.id) {
             console.log("Message from someone else, checking notification permission...");
             console.log("Permission:", typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'N/A');
+            console.log("Document visibility:", document.visibilityState);
             console.log("Window has focus:", document.hasFocus());
             
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              // Show notification if window is not focused or minimized
-              if (!document.hasFocus()) {
+              // Show notification if tab is hidden or window doesn't have focus
+              const shouldNotify = document.visibilityState === 'hidden' || !document.hasFocus();
+              
+              if (shouldNotify) {
                 console.log("Showing notification for:", formattedMessage.author);
                 const notification = new Notification(formattedMessage.author, {
                   body: formattedMessage.text,
                   icon: formattedMessage.avatar,
                   tag: conversationId, // Replaces previous notification from same conversation
+                  requireInteraction: false,
                 });
                 
                 // Focus window when notification is clicked
@@ -133,7 +137,7 @@ export function useChat(conversationId: string) {
                   notification.close();
                 };
               } else {
-                console.log("Window has focus, not showing notification");
+                console.log("Tab is visible and focused, not showing notification");
               }
             } else {
               console.log("Notification not available or permission not granted");
