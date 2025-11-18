@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -16,6 +16,8 @@ export function useChat(conversationId: string) {
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [typingUsers, setTypingUsers] = useState<{ userId: string; userName: string }[]>([]);
+  const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   // Request notification permission on mount
   useEffect(() => {
@@ -79,18 +81,78 @@ export function useChat(conversationId: string) {
     [conversationId, user, profile]
   );
 
+  // Broadcast typing event
+  const broadcastTyping = useCallback(() => {
+    if (!user || !profile || !profile.full_name || !conversationId) return;
+    
+    const channel = supabase.channel(`room:${conversationId}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { userId: user.id, userName: profile.full_name },
+    });
+  }, [conversationId, user, profile]);
+
+  // Broadcast stop typing event
+  const broadcastStopTyping = useCallback(() => {
+    if (!user || !conversationId) return;
+    
+    const channel = supabase.channel(`room:${conversationId}`);
+    channel.send({
+      type: 'broadcast',
+      event: 'stop-typing',
+      payload: { userId: user.id },
+    });
+  }, [conversationId, user]);
+
   // Set up real-time subscription
   useEffect(() => {
     if (!conversationId) return;
 
     loadMessages();
 
-    // Subscribe to new messages
+    // Subscribe to new messages and typing events
     const channel = supabase
       .channel(`room:${conversationId}`, {
         config: {
-          broadcast: { self: true },
+          broadcast: { self: false },
         },
+      })
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        const { userId, userName } = payload.payload;
+        if (userId !== user?.id) {
+          // Clear existing timeout for this user
+          const existingTimeout = typingTimeoutsRef.current.get(userId);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
+          }
+
+          // Add or update user in typing list
+          setTypingUsers((prev) => {
+            if (prev.some(u => u.userId === userId)) return prev;
+            return [...prev, { userId, userName }];
+          });
+
+          // Set new timeout to remove after 3 seconds
+          const timeout = setTimeout(() => {
+            setTypingUsers((prev) => prev.filter(u => u.userId !== userId));
+            typingTimeoutsRef.current.delete(userId);
+          }, 3000);
+          
+          typingTimeoutsRef.current.set(userId, timeout);
+        }
+      })
+      .on('broadcast', { event: 'stop-typing' }, (payload) => {
+        const { userId } = payload.payload;
+        
+        // Clear timeout for this user
+        const existingTimeout = typingTimeoutsRef.current.get(userId);
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+          typingTimeoutsRef.current.delete(userId);
+        }
+        
+        setTypingUsers((prev) => prev.filter(u => u.userId !== userId));
       })
       .on(
         "postgres_changes",
@@ -155,6 +217,10 @@ export function useChat(conversationId: string) {
       .subscribe();
 
     return () => {
+      // Clean up all typing timeouts
+      typingTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+      typingTimeoutsRef.current.clear();
+      
       supabase.removeChannel(channel);
     };
   }, [conversationId, loadMessages, user]);
@@ -163,5 +229,8 @@ export function useChat(conversationId: string) {
     messages,
     sendMessage,
     loading,
+    typingUsers,
+    broadcastTyping,
+    broadcastStopTyping,
   };
 }

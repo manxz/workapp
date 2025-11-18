@@ -6,6 +6,7 @@ import ChatSidebar from "@/components/ChatSidebar";
 import ChatInput from "@/components/ChatInput";
 import ChatHeader from "@/components/ChatHeader";
 import ChatMessages from "@/components/ChatMessages";
+import TypingIndicator from "@/components/TypingIndicator";
 import Login from "@/components/Login";
 import ProfileSetup from "@/components/ProfileSetup";
 import ProjectsView from "@/components/ProjectsView";
@@ -140,7 +141,7 @@ export default function Home() {
         : ""
     : "";
   
-  const { messages, sendMessage } = useChat(conversationId);
+  const { messages, sendMessage, typingUsers, broadcastTyping, broadcastStopTyping } = useChat(conversationId);
 
   // Show loading state while auth is initializing
   if (loading) {
@@ -245,10 +246,15 @@ export default function Home() {
                   avatar={selectedType === "dm" ? selectedChat.avatar : undefined} 
                 />
                 <ChatMessages messages={messages} />
-                <ChatInput
-                  channelName={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
-                  onSendMessage={(text) => sendMessage(text)}
-                />
+                <div className="flex flex-col gap-0">
+                  <ChatInput
+                    channelName={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
+                    onSendMessage={(text) => sendMessage(text)}
+                    onTyping={broadcastTyping}
+                    onStopTyping={broadcastStopTyping}
+                  />
+                  <TypingIndicator typingUsers={typingUsers} />
+                </div>
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center">

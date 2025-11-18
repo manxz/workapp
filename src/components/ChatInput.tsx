@@ -6,19 +6,54 @@ import { useState, useRef, useEffect } from "react";
 type ChatInputProps = {
   channelName?: string;
   onSendMessage?: (message: string) => void;
+  onTyping?: () => void;
+  onStopTyping?: () => void;
 };
 
-export default function ChatInput({ channelName = "Design", onSendMessage }: ChatInputProps) {
+export default function ChatInput({ channelName = "Design", onSendMessage, onTyping, onStopTyping }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleSend = () => {
     if (message.trim()) {
       onSendMessage?.(message);
       setMessage("");
+      onStopTyping?.();
+      // Clear typing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
+      }
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    
+    // Broadcast typing
+    if (e.target.value.length > 0) {
+      onTyping?.();
+      
+      // Clear previous timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // Set new timeout to stop typing after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        onStopTyping?.();
+      }, 2000);
+    } else {
+      // Empty input, stop typing immediately
+      onStopTyping?.();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
       }
     }
   };
@@ -39,12 +74,12 @@ export default function ChatInput({ channelName = "Design", onSendMessage }: Cha
   }, [message]);
 
   return (
-    <div className="px-4 pb-4">
+    <div className="px-4">
       <div className="bg-neutral-50 border border-neutral-200 rounded-xl flex items-start justify-between pl-3 pr-2 py-2 gap-2">
         <textarea
           ref={textareaRef}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={`Message ${channelName}`}
           rows={1}

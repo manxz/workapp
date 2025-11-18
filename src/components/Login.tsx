@@ -32,7 +32,6 @@ export default function Login() {
               },
             }}
             providers={["google"]}
-            onlyThirdPartyProviders
             redirectTo={typeof window !== 'undefined' ? window.location.origin : undefined}
           />
         </div>
