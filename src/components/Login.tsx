@@ -31,7 +31,8 @@ export default function Login() {
                 input: "font-medium text-sm",
               },
             }}
-            providers={[]}
+            providers={["google"]}
+            onlyThirdPartyProviders
             redirectTo={typeof window !== 'undefined' ? window.location.origin : undefined}
           />
         </div>

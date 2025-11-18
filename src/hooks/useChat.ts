@@ -101,6 +101,7 @@ export function useChat(conversationId: string) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          console.log("Message received");
           const newMsg = payload.new as any;
           const formattedMessage: Message = {
             id: newMsg.id,
@@ -112,6 +113,7 @@ export function useChat(conversationId: string) {
           
           // Show browser notification if message is from someone else
           if (user && newMsg.author_id !== user.id) {
+            console.log("Attempting notification");
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               // Show notification if tab is hidden or window doesn't have focus
               const shouldNotify = document.visibilityState === 'hidden' || !document.hasFocus();
