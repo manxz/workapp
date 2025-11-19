@@ -19,15 +19,19 @@ type ChatMessagesProps = {
 
 // Helper function to detect and linkify URLs
 function linkifyText(text: string) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  // Match URLs with protocol (http/https) OR www. OR common domain patterns
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|(?:[a-zA-Z0-9-]+\.)+(?:com|org|net|edu|gov|io|co|dev|app|ai|xyz|tech|me|info|biz|us|uk|ca|de|jp|fr|au|in|br|cn|ru|nl|se|no|dk|fi|it|es|pl|ch|at|be|cz|gr|hu|ie|il|nz|pt|ro|sg|za|kr|mx|ar|cl|my|ph|th|tw|vn|id|pk|bd|ua|ng|eg|ke|tz|gh|ug|zm|zw|ao|bw|cd|ci|cm|et|ga|gn|lr|mg|ml|mz|ne|rw|sd|sn|so|sz|tg|tn|ye|af|am|az|by|ge|kg|kz|lk|md|mn|tj|tm|uz|ba|bg|ee|hr|lt|lv|mk|rs|si|sk|al|ad|cy|fo|gi|is|li|mc|mt|sm|va)[^\s]*)/gi;
   const parts = text.split(urlRegex);
   
   return parts.map((part, index) => {
     if (part.match(urlRegex)) {
+      // Add https:// if the URL doesn't have a protocol
+      const href = part.match(/^https?:\/\//) ? part : `https://${part}`;
+      
       return (
         <a
           key={index}
-          href={part}
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="text-[#0070F3] hover:underline"

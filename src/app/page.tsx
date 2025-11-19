@@ -28,6 +28,16 @@ export default function Home() {
   const { projects, loading: projectsLoading, createProject, deleteProject } = useProjects();
   const { tasks: allTasks } = useTasks(); // Load all tasks to calculate counts
   const { hasUnread, markAsRead } = useUnreadMessages();
+  
+  // Check if there are any unread messages across all channels and DMs
+  const hasUnreadMessages = useMemo(() => {
+    // Check channels
+    const hasUnreadChannels = channels.some(c => hasUnread(`channel-${c.id}`));
+    // Check DMs
+    const hasUnreadDMs = user ? users.some(u => hasUnread([user.id, u.id].sort().join("-"))) : false;
+    return hasUnreadChannels || hasUnreadDMs;
+  }, [channels, users, user, hasUnread]);
+  
   // Initialize state from localStorage if available
   const [activeView, setActiveView] = useState<"chat" | "projects">(() => {
     if (typeof window !== 'undefined') {
