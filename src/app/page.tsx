@@ -327,53 +327,46 @@ export default function Home() {
             )}
 
         {activeView === "chat" ? (
-          <>
-            {selectedChat ? (
-              <>
-                <ChatHeader 
-                  name={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name} 
-                  avatar={selectedType === "dm" ? selectedChat.avatar : undefined} 
-                />
-                
-                {/* Conversation area - basis-0 grow (FILL) */}
-                <div className="basis-0 grow min-h-0">
-                  <ChatMessages messages={messages} />
-                </div>
-                
-                {/* Input area - shrink-0 (HUG) */}
-                <div className="shrink-0">
-                  <ChatInput
-                    channelName={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
-                    onSendMessage={(text, files) => sendMessage(text, files)}
-                    onTyping={broadcastTyping}
-                    onStopTyping={broadcastStopTyping}
-                    externalFiles={pendingFiles}
-                  />
-                </div>
-                
-                {/* Typing indicator - fixed 20px height */}
-                <div className="h-5 shrink-0">
-                  <TypingIndicator typingUsers={typingUsers} />
-                </div>
-                
-                <NotificationPrompt />
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <p className="text-lg font-medium text-neutral-600 mb-2">No channels or users yet</p>
-                  <p className="text-sm text-neutral-500">Create a channel or invite someone to start chatting!</p>
-                </div>
-              </div>
-            )}
-          </>
-            ) : (
-              <ProjectsView 
-                selectedProject={selectedProject}
-                projectName={projects.find(p => p.id === selectedProject)?.name || "General"}
-                onDeleteProject={handleDeleteProject}
+          selectedChat ? (
+            <>
+              {/* Header */}
+              <ChatHeader 
+                name={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name} 
+                avatar={selectedType === "dm" ? selectedChat.avatar : undefined} 
               />
-            )}
+              
+              {/* Messages - scrollable, takes remaining space */}
+              <ChatMessages messages={messages} />
+              
+              {/* Input area - grows with content */}
+              <ChatInput
+                channelName={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
+                onSendMessage={(text, files) => sendMessage(text, files)}
+                onTyping={broadcastTyping}
+                onStopTyping={broadcastStopTyping}
+                externalFiles={pendingFiles}
+              />
+              
+              {/* Typing indicator */}
+              <TypingIndicator typingUsers={typingUsers} />
+              
+              <NotificationPrompt />
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-lg font-medium text-neutral-600 mb-2">No channels or users yet</p>
+                <p className="text-sm text-neutral-500">Create a channel or invite someone to start chatting!</p>
+              </div>
+            </div>
+          )
+        ) : (
+          <ProjectsView 
+            selectedProject={selectedProject}
+            projectName={projects.find(p => p.id === selectedProject)?.name || "General"}
+            onDeleteProject={handleDeleteProject}
+          />
+        )}
       </main>
     </div>
   );

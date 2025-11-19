@@ -46,15 +46,34 @@ function linkifyText(text: string) {
 
 function ChatMessages({ messages }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Keep scroll at bottom when container resizes (input grows)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      scrollToBottom();
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -95,8 +114,8 @@ function ChatMessages({ messages }: ChatMessagesProps) {
   };
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col justify-end">
-      <div className="px-4 py-4">
+    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ display: 'flex', flexDirection: 'column' }}>
+      <div className="px-4 py-4" style={{ marginTop: 'auto' }}>
         {messages.map((message, index) => (
           <div key={message.id}>
             {shouldShowDateDivider(message, index > 0 ? messages[index - 1] : null) && (
