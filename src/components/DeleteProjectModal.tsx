@@ -28,7 +28,7 @@ export default function DeleteProjectModal({ isOpen, onClose, onConfirm, project
             {/* Title and Description */}
             <div className="flex flex-col gap-1">
               <h2 className="font-semibold text-base text-black">
-                Delete "{projectName}"?
+                Delete &ldquo;{projectName}&rdquo;?
               </h2>
               <p className="font-medium text-sm text-[#7d7d7f]">
                 This will permanently delete the project and all associated issues. This action cannot be undone.

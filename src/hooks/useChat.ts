@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export type Message = {
   id: string;
@@ -161,7 +162,7 @@ export function useChat(conversationId: string) {
   );
 
   // Store channel ref to reuse for broadcasts
-  const channelRef = useRef<any>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -234,7 +235,7 @@ export function useChat(conversationId: string) {
           filter: `conversation_id=eq.${conversationId}`,
         },
           (payload) => {
-            const newMsg = payload.new as any;
+            const newMsg = payload.new as Record<string, unknown>;
             
             // Skip if we've already processed this message
             if (processedMessageIds.current.has(newMsg.id)) {

@@ -22,12 +22,6 @@ export default function NotificationPrompt() {
     }
   };
 
-  const handleDismiss = () => {
-    setShow(false);
-    // Remember that user dismissed this
-    localStorage.setItem('notification-prompt-dismissed', 'true');
-  };
-
   // Don't show if user previously dismissed
   useEffect(() => {
     if (typeof window !== 'undefined') {

@@ -20,12 +20,11 @@ import { useChannels } from "@/hooks/useChannels";
 import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-import { supabase } from "@/lib/supabase";
 
 export default function Home() {
   const { user, profile, loading } = useAuth();
-  const { users, loading: usersLoading } = useUsers();
-  const { channels, loading: channelsLoading } = useChannels();
+  const { users } = useUsers();
+  const { channels } = useChannels();
   const { projects, loading: projectsLoading, createProject, deleteProject } = useProjects();
   const { tasks: allTasks } = useTasks(); // Load all tasks to calculate counts
   const { hasUnread, markAsRead } = useUnreadMessages();
@@ -37,7 +36,6 @@ export default function Home() {
     }
     return "chat";
   });
-  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [selectedType, setSelectedType] = useState<"channel" | "dm">(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem("selectedChatType");

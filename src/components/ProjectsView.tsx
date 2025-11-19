@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Plus, Article, ListBullets, Kanban, CheckCircle, Prohibit, Gear } from "@phosphor-icons/react";
-import { useTasks } from "@/hooks/useTasks";
-import { useUsers } from "@/hooks/useUsers";
+import { useTasks, type Task } from "@/hooks/useTasks";
 import NewIssueModal from "./NewIssueModal";
 import DeleteProjectModal from "./DeleteProjectModal";
 import {
   DndContext,
+  DragStartEvent,
   DragEndEvent,
   DragOverEvent,
   DragOverlay,
@@ -24,7 +24,6 @@ type ProjectsViewProps = {
 
 export default function ProjectsView({ selectedProject, projectName, onDeleteProject }: ProjectsViewProps) {
   const { tasks, createTask, updateTask } = useTasks(selectedProject);
-  const { users } = useUsers();
   const [filter, setFilter] = useState<"all" | "todo" | "in_progress" | "backlog" | "blocked">("all");
   const [showModal, setShowModal] = useState(false);
   const [view, setView] = useState<"list" | "board">("list");
@@ -381,24 +380,24 @@ function KanbanBoard({
   tasks,
   onStatusChange,
 }: {
-  tasks: any[];
+  tasks: Task[];
   onStatusChange: (taskId: string, status: "todo" | "in_progress" | "backlog" | "done" | "blocked") => void;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-  const [optimisticTasks, setOptimisticTasks] = useState<any[]>(tasks);
+  const [optimisticTasks, setOptimisticTasks] = useState<Task[]>(tasks);
 
   // Update optimistic tasks when real tasks change
   useEffect(() => {
     setOptimisticTasks(tasks);
   }, [tasks]);
 
-  const handleDragStart = (event: any) => {
+  const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
+    const { over } = event;
     
     if (!over) {
       setOverId(null);
@@ -521,7 +520,7 @@ function KanbanColumn({
 }: {
   id: string;
   title: string;
-  tasks: any[];
+  tasks: Task[];
   icon: React.ReactNode;
   onStatusChange: (taskId: string, status: "todo" | "in_progress" | "backlog" | "done" | "blocked") => void;
   isOver: boolean;
@@ -562,7 +561,7 @@ function KanbanCard({
   onStatusChange,
   isDragging = false,
 }: {
-  task: any;
+  task: Task;
   onStatusChange: (taskId: string, status: "todo" | "in_progress" | "backlog" | "done" | "blocked") => void;
   isDragging?: boolean;
 }) {
@@ -616,7 +615,7 @@ function TaskRow({
   task,
   onStatusChange,
 }: {
-  task: any;
+  task: Task;
   onStatusChange: (status: "todo" | "in_progress" | "backlog" | "done" | "blocked") => void;
 }) {
   const [showStatusMenu, setShowStatusMenu] = useState(false);

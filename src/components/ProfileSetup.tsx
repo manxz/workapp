@@ -44,9 +44,10 @@ export default function ProfileSetup() {
 
       // Reload the page to refresh the profile
       window.location.reload();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error updating profile:", err);
-      setError(err.message || err.hint || "Failed to update profile");
+      const error = err as { message?: string; hint?: string };
+      setError(error.message || error.hint || "Failed to update profile");
     } finally {
       setLoading(false);
     }
@@ -57,14 +58,14 @@ export default function ProfileSetup() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-medium text-black mb-2">Welcome to WorkApp</h1>
-          <p className="text-sm text-neutral-600">Let's set up your profile</p>
+          <p className="text-sm text-neutral-600">Let&apos;s set up your profile</p>
         </div>
         
         <div className="bg-white border border-neutral-200 rounded-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-neutral-700 mb-2">
-                What's your name?
+                What&apos;s your name?
               </label>
               <input
                 id="name"
