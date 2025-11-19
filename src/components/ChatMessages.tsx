@@ -95,8 +95,8 @@ function ChatMessages({ messages }: ChatMessagesProps) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="px-4 py-4 min-h-full flex flex-col justify-end">
+    <div className="h-full overflow-y-auto flex flex-col justify-end">
+      <div className="px-4 py-4">
         {messages.map((message, index) => (
           <div key={message.id}>
             {shouldShowDateDivider(message, index > 0 ? messages[index - 1] : null) && (

@@ -35,7 +35,7 @@ export default function NotificationPrompt() {
   if (!show) return null;
 
   return (
-    <div className="px-2 pb-4">
+    <div className="px-2">
       <div className="bg-[#fafafa] border border-[rgba(29,29,31,0.1)] rounded-xl p-4 flex flex-col gap-4">
         {/* Icon and Text */}
         <div className="flex flex-col gap-1">

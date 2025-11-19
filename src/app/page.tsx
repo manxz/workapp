@@ -306,7 +306,7 @@ export default function Home() {
         />
       )}
       <main 
-        className={`flex flex-col h-screen flex-1 relative ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"}`}
+        className={`flex flex-col h-screen flex-1 relative overflow-hidden ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"}`}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -334,8 +334,14 @@ export default function Home() {
                   name={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name} 
                   avatar={selectedType === "dm" ? selectedChat.avatar : undefined} 
                 />
-                <ChatMessages messages={messages} />
-                <div className="flex flex-col gap-0">
+                
+                {/* Conversation area - basis-0 grow (FILL) */}
+                <div className="basis-0 grow min-h-0">
+                  <ChatMessages messages={messages} />
+                </div>
+                
+                {/* Input area - shrink-0 (HUG) */}
+                <div className="shrink-0">
                   <ChatInput
                     channelName={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
                     onSendMessage={(text, files) => sendMessage(text, files)}
@@ -343,8 +349,13 @@ export default function Home() {
                     onStopTyping={broadcastStopTyping}
                     externalFiles={pendingFiles}
                   />
+                </div>
+                
+                {/* Typing indicator - fixed 20px height */}
+                <div className="h-5 shrink-0">
                   <TypingIndicator typingUsers={typingUsers} />
                 </div>
+                
                 <NotificationPrompt />
               </>
             ) : (

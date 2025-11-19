@@ -25,15 +25,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check active sessions
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadProfile(session.user.id);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await loadProfile(session.user.id);
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    initAuth();
+    // Add timeout fallback in case Supabase hangs
+    const timeout = setTimeout(() => {
+      console.warn("Auth initialization timed out after 5s");
+      setLoading(false);
+    }, 5000);
+
+    initAuth().then(() => clearTimeout(timeout));
 
     // Listen for auth changes
     const {

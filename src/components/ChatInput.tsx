@@ -33,9 +33,10 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
         clearTimeout(typingTimeoutRef.current);
         typingTimeoutRef.current = null;
       }
-      // Reset textarea height
+      // Reset textarea height and overflow
       if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
+        textareaRef.current.style.height = "";
+        textareaRef.current.style.overflowY = "hidden";
       }
     }
   }, [message, uploadedFiles, onSendMessage, onStopTyping]);
@@ -138,11 +139,21 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
     }
   };
 
-  // Auto-resize textarea as content grows
+  // Initialize textarea on mount
   useEffect(() => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      textareaRef.current.style.overflowY = "hidden";
+    }
+  }, []);
+
+  // Auto-resize textarea as content grows
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "";
+      const newHeight = Math.min(textarea.scrollHeight, 400);
+      textarea.style.height = `${newHeight}px`;
+      textarea.style.overflowY = textarea.scrollHeight > 400 ? "auto" : "hidden";
     }
   }, [message]);
 
@@ -201,8 +212,8 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder={`Message ${channelName}`}
+            className="w-full bg-transparent outline-none text-[13px] font-medium text-neutral-600 placeholder:text-neutral-400 placeholder:opacity-70 resize-none max-h-[400px] leading-[20px] py-[2px] box-border"
             rows={1}
-            className="flex-1 bg-transparent outline-none text-[13px] font-medium text-neutral-600 placeholder:text-neutral-400 placeholder:opacity-70 resize-none max-h-[200px] overflow-y-auto leading-[20px] py-0.5"
           />
         </div>
         

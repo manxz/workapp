@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "@phosphor-icons/react";
 
 type NewProjectModalProps = {
@@ -12,6 +13,11 @@ type NewProjectModalProps = {
 export default function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleCreate = () => {
     if (!name.trim()) return;
@@ -21,9 +27,9 @@ export default function NewProjectModal({ isOpen, onClose, onCreate }: NewProjec
     onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
+  const modalContent = (
     <div 
       className="fixed inset-0 flex items-center justify-center z-50" 
       style={{ backgroundColor: 'rgba(29, 29, 31, 0.55)' }} 
@@ -81,5 +87,7 @@ export default function NewProjectModal({ isOpen, onClose, onCreate }: NewProjec
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
 
