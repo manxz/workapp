@@ -17,6 +17,29 @@ type ChatMessagesProps = {
   messages: Message[];
 };
 
+// Helper function to detect and linkify URLs
+function linkifyText(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a
+          key={index}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#0070F3] hover:underline"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
+
 function ChatMessages({ messages }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -104,7 +127,7 @@ function ChatMessages({ messages }: ChatMessagesProps) {
                     {/* Message Text */}
                     {message.text && (
                       <p className="text-[13px] font-medium text-black opacity-90 leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                        {message.text}
+                        {linkifyText(message.text)}
                       </p>
                     )}
                     
