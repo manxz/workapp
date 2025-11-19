@@ -238,23 +238,23 @@ export function useChat(conversationId: string) {
             const newMsg = payload.new as Record<string, unknown>;
             
             // Skip if we've already processed this message
-            if (processedMessageIds.current.has(newMsg.id)) {
+            if (processedMessageIds.current.has(newMsg.id as string)) {
               return;
             }
-            processedMessageIds.current.add(newMsg.id);
+            processedMessageIds.current.add(newMsg.id as string);
             
             const formattedMessage: Message = {
-              id: newMsg.id,
-              author: newMsg.author_name,
-              avatar: newMsg.author_avatar || "https://i.pravatar.cc/150?img=1",
-              timestamp: newMsg.created_at,
-              text: newMsg.text,
-              imageUrl: newMsg.image_url, // Legacy single image
-              imageUrls: newMsg.image_urls || undefined, // Multiple images
+              id: newMsg.id as string,
+              author: newMsg.author_name as string,
+              avatar: (newMsg.author_avatar as string) || "https://i.pravatar.cc/150?img=1",
+              timestamp: newMsg.created_at as string,
+              text: newMsg.text as string,
+              imageUrl: newMsg.image_url as string | undefined, // Legacy single image
+              imageUrls: (newMsg.image_urls as string[]) || undefined, // Multiple images
             };
           
           // Show browser notification if message is from someone else
-          if (user && newMsg.author_id !== user.id) {
+          if (user && (newMsg.author_id as string) !== user.id) {
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
               // Show notification if tab is hidden or window doesn't have focus
               const shouldNotify = document.visibilityState === 'hidden' || !document.hasFocus();
@@ -291,7 +291,7 @@ export function useChat(conversationId: string) {
             }
             
             // Replace optimistic message if it's from the current user
-            if (newMsg.author_id === user?.id) {
+            if ((newMsg.author_id as string) === user?.id) {
               // First try to find by stored ref
               let optimisticIndex = optimisticMessageRef.current 
                 ? prev.findIndex(m => m.id === optimisticMessageRef.current)

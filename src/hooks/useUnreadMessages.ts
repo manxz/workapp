@@ -57,10 +57,10 @@ export function useUnreadMessages() {
           table: "messages",
         },
         (payload) => {
-          const newMsg = payload.new as any;
+          const newMsg = payload.new as Record<string, unknown>;
           // Only mark as unread if message is from someone else
-          if (newMsg.author_id !== user.id) {
-            markAsUnread(newMsg.conversation_id);
+          if ((newMsg.author_id as string) !== user.id) {
+            markAsUnread(newMsg.conversation_id as string);
           }
         }
       )
