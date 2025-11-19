@@ -546,7 +546,7 @@ function KanbanColumn({
         </div>
         <span className="text-xs font-medium text-[#7d7d7f] leading-[12px]">{tasks.length}</span>
       </div>
-      <div className="flex flex-col gap-2 px-2 py-2 overflow-y-auto flex-1">
+      <div className="flex flex-col gap-2 px-2 py-2 overflow-y-auto flex-1 hide-scrollbar">
         {tasks.map((task) => (
           task.id !== activeId && <KanbanCard key={task.id} task={task} onStatusChange={onStatusChange} />
         ))}
