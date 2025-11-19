@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useRef, memo, useState } from "react";
+import { X } from "@phosphor-icons/react";
 
 export type Message = {
   id: string;
@@ -8,6 +9,8 @@ export type Message = {
   avatar: string;
   timestamp: string;
   text: string;
+  imageUrl?: string; // Legacy single image
+  imageUrls?: string[]; // Multiple images
 };
 
 type ChatMessagesProps = {
@@ -16,6 +19,7 @@ type ChatMessagesProps = {
 
 function ChatMessages({ messages }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
@@ -97,16 +101,75 @@ function ChatMessages({ messages }: ChatMessagesProps) {
                   </span>
                 </div>
                 
-                {/* Message Text */}
-                <p className="text-[13px] font-medium text-black opacity-90 leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                  {message.text}
-                </p>
-              </div>
-            </div>
+                    {/* Message Text */}
+                    {message.text && (
+                      <p className="text-[13px] font-medium text-black opacity-90 leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                        {message.text}
+                      </p>
+                    )}
+                    
+                    {/* Message Images */}
+                    {(message.imageUrls || message.imageUrl) && (
+                      <div className="mt-2 flex flex-col gap-2">
+                        {/* Multiple images */}
+                        {message.imageUrls && message.imageUrls.map((url, index) => (
+                          <div 
+                            key={index}
+                            className="cursor-pointer"
+                            onClick={() => setLightboxImage(url)}
+                          >
+                            <img
+                              src={url}
+                              alt={`Uploaded image ${index + 1}`}
+                              className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
+                            />
+                          </div>
+                        ))}
+                        
+                        {/* Legacy single image */}
+                        {!message.imageUrls && message.imageUrl && (
+                          <div 
+                            className="cursor-pointer"
+                            onClick={() => setLightboxImage(message.imageUrl || null)}
+                          >
+                            <img
+                              src={message.imageUrl}
+                              alt="Uploaded image"
+                              className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-8"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-4 right-4 bg-white text-black rounded-full p-2 hover:bg-neutral-100 transition-colors z-10"
+            aria-label="Close lightbox"
+          >
+            <X size={24} weight="bold" />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Full size image"
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

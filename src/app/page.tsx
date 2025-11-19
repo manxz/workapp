@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Mountains } from "@phosphor-icons/react";
 import Sidebar from "@/components/Sidebar";
 import ChatSidebar from "@/components/ChatSidebar";
 import ChatInput from "@/components/ChatInput";
@@ -70,6 +71,9 @@ export default function Home() {
     }
     return "";
   });
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const dragCounterRef = useRef(0);
 
   // Calculate task counts per project
   const taskCounts = useMemo(() => {
@@ -144,6 +148,16 @@ export default function Home() {
   
   const { messages, sendMessage, typingUsers, broadcastTyping, broadcastStopTyping } = useChat(conversationId);
 
+  // Reset pending files after they're passed to ChatInput
+  useEffect(() => {
+    if (pendingFiles.length > 0) {
+      const timer = setTimeout(() => {
+        setPendingFiles([]);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [pendingFiles]);
+
   // Show loading state while auth is initializing
   if (loading) {
     return (
@@ -193,6 +207,52 @@ export default function Home() {
     }
   };
 
+  // Handle drag & drop for file uploads (only in chat view)
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (activeView !== "chat" || !selectedChat) return;
+    
+    dragCounterRef.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDraggingFile(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDraggingFile(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setIsDraggingFile(false);
+    dragCounterRef.current = 0;
+    
+    if (activeView !== "chat" || !selectedChat) return;
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      if (imageFiles.length > 0) {
+        // Cap at 10 files maximum
+        setPendingFiles(imageFiles.slice(0, 10));
+      }
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-white">
       <Sidebar
@@ -237,7 +297,27 @@ export default function Home() {
           taskCounts={taskCounts}
         />
       )}
-      <main className={`flex flex-col h-screen flex-1 ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"}`}>
+      <main 
+        className={`flex flex-col h-screen flex-1 relative ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"}`}
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {/* Drag & Drop Overlay */}
+            {isDraggingFile && activeView === "chat" && selectedChat && (
+              <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none" style={{ backgroundColor: 'rgba(255, 255, 255, 0.85)' }}>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
+                    <Mountains size={32} weight="regular" className="text-neutral-400" />
+                  </div>
+                  <p className="text-sm font-medium text-neutral-600">
+                    Upload to {selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
+                  </p>
+                </div>
+              </div>
+            )}
+
         {activeView === "chat" ? (
           <>
             {selectedChat ? (
@@ -250,9 +330,10 @@ export default function Home() {
                 <div className="flex flex-col gap-0">
                   <ChatInput
                     channelName={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
-                    onSendMessage={(text) => sendMessage(text)}
+                    onSendMessage={(text, files) => sendMessage(text, files)}
                     onTyping={broadcastTyping}
                     onStopTyping={broadcastStopTyping}
+                    externalFiles={pendingFiles}
                   />
                   <TypingIndicator typingUsers={typingUsers} />
                 </div>

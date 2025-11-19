@@ -10,6 +10,8 @@ export type Message = {
   avatar: string;
   timestamp: string;
   text: string;
+  imageUrl?: string; // Legacy single image
+  imageUrls?: string[]; // Multiple images
 };
 
 export function useChat(conversationId: string) {
@@ -18,6 +20,8 @@ export function useChat(conversationId: string) {
   const [loading, setLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState<{ userId: string; userName: string }[]>([]);
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const optimisticMessageRef = useRef<string | null>(null);
+  const processedMessageIds = useRef<Set<string>>(new Set());
 
   // Request notification permission on mount
   useEffect(() => {
@@ -40,13 +44,20 @@ export function useChat(conversationId: string) {
       if (error) throw error;
 
       if (data) {
-        const formattedMessages: Message[] = data.map((msg) => ({
-          id: msg.id,
-          author: msg.author_name,
-          avatar: msg.author_avatar || "https://i.pravatar.cc/150?img=1",
-          timestamp: msg.created_at,
-          text: msg.text,
-        }));
+        const formattedMessages: Message[] = data.map((msg) => {
+          // Add to processed set to prevent duplicate processing
+          processedMessageIds.current.add(msg.id);
+          
+          return {
+            id: msg.id,
+            author: msg.author_name,
+            avatar: msg.author_avatar || "https://i.pravatar.cc/150?img=1",
+            timestamp: msg.created_at,
+            text: msg.text,
+            imageUrl: msg.image_url, // Legacy single image
+            imageUrls: msg.image_urls || undefined, // Multiple images
+          };
+        });
         setMessages(formattedMessages);
       }
     } catch (error) {
@@ -58,22 +69,90 @@ export function useChat(conversationId: string) {
 
   // Send a message
   const sendMessage = useCallback(
-    async (text: string) => {
+    async (text: string, files?: File[]) => {
       if (!user || !profile || !profile.full_name) {
         console.error("User not authenticated or profile not loaded");
         return;
       }
 
+      // Create optimistic message with local previews
+      const optimisticId = `temp-${Date.now()}`;
+      optimisticMessageRef.current = optimisticId;
+      let localPreviewUrls: string[] = [];
+
+      if (files && files.length > 0) {
+        // Create local preview URLs for instant display
+        localPreviewUrls = files.map(file => URL.createObjectURL(file));
+      }
+
+      const optimisticMessage: Message = {
+        id: optimisticId,
+        author: profile.full_name,
+        avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
+        timestamp: new Date().toISOString(),
+        text: text,
+        imageUrls: localPreviewUrls.length > 0 ? localPreviewUrls : undefined,
+      };
+
+      // Add optimistic message immediately
+      setMessages((prev) => [...prev, optimisticMessage]);
+
       try {
+        let imageUrls: string[] = [];
+
+        // Upload files in background if provided
+        if (files && files.length > 0) {
+          const uploadPromises = files.map(async (file, index) => {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${user.id}-${Date.now()}-${index}.${fileExt}`;
+            const filePath = `${conversationId}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('chat-uploads')
+              .upload(filePath, file);
+
+            if (uploadError) {
+              console.error("Error uploading file:", uploadError);
+              throw uploadError;
+            }
+
+            // Get public URL after successful upload
+            const { data: { publicUrl } } = supabase.storage
+              .from('chat-uploads')
+              .getPublicUrl(filePath);
+
+            return publicUrl;
+          });
+
+          try {
+            imageUrls = await Promise.all(uploadPromises);
+          } catch (uploadError) {
+            console.error("Error uploading files:", uploadError);
+            // Remove optimistic message on error
+            setMessages((prev) => prev.filter(m => m.id !== optimisticId));
+            throw uploadError;
+          }
+        }
+
+        // Insert message to database
         const { error } = await supabase.from("messages").insert({
           conversation_id: conversationId,
           author_id: user.id,
           author_name: profile.full_name,
           author_avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
           text: text,
+          image_urls: imageUrls.length > 0 ? imageUrls : null,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error inserting message:", error);
+          // Remove optimistic message on error
+          setMessages((prev) => prev.filter(m => m.id !== optimisticId));
+          throw error;
+        }
+
+        // Don't remove optimistic message - let real-time replace it
+        // This prevents the flicker of images disappearing and reappearing
       } catch (error) {
         console.error("Error sending message:", error);
       }
@@ -90,6 +169,12 @@ export function useChat(conversationId: string) {
 
     // Reset typing users when switching conversations
     setTypingUsers([]);
+    
+    // Clear optimistic message ref when switching conversations
+    optimisticMessageRef.current = null;
+    
+    // Clear processed message IDs when switching conversations
+    processedMessageIds.current.clear();
 
     loadMessages();
 
@@ -148,15 +233,24 @@ export function useChat(conversationId: string) {
           table: "messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload) => {
-          const newMsg = payload.new as any;
-          const formattedMessage: Message = {
-            id: newMsg.id,
-            author: newMsg.author_name,
-            avatar: newMsg.author_avatar || "https://i.pravatar.cc/150?img=1",
-            timestamp: newMsg.created_at,
-            text: newMsg.text,
-          };
+          (payload) => {
+            const newMsg = payload.new as any;
+            
+            // Skip if we've already processed this message
+            if (processedMessageIds.current.has(newMsg.id)) {
+              return;
+            }
+            processedMessageIds.current.add(newMsg.id);
+            
+            const formattedMessage: Message = {
+              id: newMsg.id,
+              author: newMsg.author_name,
+              avatar: newMsg.author_avatar || "https://i.pravatar.cc/150?img=1",
+              timestamp: newMsg.created_at,
+              text: newMsg.text,
+              imageUrl: newMsg.image_url, // Legacy single image
+              imageUrls: newMsg.image_urls || undefined, // Multiple images
+            };
           
           // Show browser notification if message is from someone else
           if (user && newMsg.author_id !== user.id) {
@@ -190,10 +284,86 @@ export function useChat(conversationId: string) {
           }
           
           setMessages((prev) => {
-            // Prevent duplicates
+            // Prevent duplicates by ID
             if (prev.some(m => m.id === formattedMessage.id)) {
               return prev;
             }
+            
+            // Replace optimistic message if it's from the current user
+            if (newMsg.author_id === user?.id) {
+              // First try to find by stored ref
+              let optimisticIndex = optimisticMessageRef.current 
+                ? prev.findIndex(m => m.id === optimisticMessageRef.current)
+                : -1;
+              
+              // If not found, try to find by temp- prefix and recent timestamp (within 10 seconds)
+              if (optimisticIndex === -1) {
+                optimisticIndex = prev.findIndex(m => 
+                  m.id.startsWith('temp-') && 
+                  m.author === formattedMessage.author &&
+                  Math.abs(new Date(m.timestamp).getTime() - new Date(formattedMessage.timestamp).getTime()) < 10000
+                );
+              }
+              
+              if (optimisticIndex !== -1) {
+                const oldMessage = prev[optimisticIndex];
+                
+                // Preload real images before replacing to prevent flash
+                if (formattedMessage.imageUrls && formattedMessage.imageUrls.length > 0) {
+                  // Preload all images first
+                  const imagePromises = formattedMessage.imageUrls.map(url => {
+                    return new Promise((resolve) => {
+                      const img = new Image();
+                      img.onload = () => resolve(true);
+                      img.onerror = () => resolve(false); // Still resolve on error
+                      img.src = url;
+                    });
+                  });
+                  
+                  // Wait for all images to load, then replace message
+                  Promise.all(imagePromises).then(() => {
+                    setMessages((current) => {
+                      const idx = current.findIndex(m => m.id === oldMessage.id);
+                      if (idx !== -1) {
+                        const updated = [...current];
+                        updated[idx] = formattedMessage;
+                        
+                        // Clean up blob URLs after replacement
+                        if (oldMessage.imageUrl && oldMessage.imageUrl.startsWith('blob:')) {
+                          URL.revokeObjectURL(oldMessage.imageUrl);
+                        }
+                        if (oldMessage.imageUrls) {
+                          oldMessage.imageUrls.forEach(url => {
+                            if (url.startsWith('blob:')) {
+                              URL.revokeObjectURL(url);
+                            }
+                          });
+                        }
+                        
+                        // Clear optimistic message ref after successful replacement
+                        optimisticMessageRef.current = null;
+                        
+                        return updated;
+                      }
+                      return current;
+                    });
+                  });
+                  
+                  // Keep the optimistic message for now (with blob URLs)
+                  return prev;
+                }
+                
+                // No images, replace immediately
+                const newMessages = [...prev];
+                newMessages[optimisticIndex] = formattedMessage;
+                
+                // Clear the optimistic message ref
+                optimisticMessageRef.current = null;
+                
+                return newMessages;
+              }
+            }
+            
             return [...prev, formattedMessage];
           });
         }
