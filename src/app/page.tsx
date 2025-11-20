@@ -27,16 +27,20 @@ export default function Home() {
   const { channels } = useChannels();
   const { projects, loading: projectsLoading, createProject, deleteProject } = useProjects();
   const { tasks: allTasks } = useTasks(); // Load all tasks to calculate counts
-  const { hasUnread, markAsRead } = useUnreadMessages();
+  const { hasUnread, markAsRead, unreadConversations } = useUnreadMessages();
   
-  // Check if there are any unread messages across all channels and DMs
-  const hasUnreadMessages = useMemo(() => {
-    // Check channels
-    const hasUnreadChannels = channels.some(c => hasUnread(`channel-${c.id}`));
-    // Check DMs
-    const hasUnreadDMs = user ? users.some(u => hasUnread([user.id, u.id].sort().join("-"))) : false;
-    return hasUnreadChannels || hasUnreadDMs;
-  }, [channels, users, user, hasUnread]);
+  // Calculate total unread count
+  const unreadCount = unreadConversations.size;
+  const hasUnreadMessages = unreadCount > 0;
+  
+  // Update browser tab title with unread count
+  useEffect(() => {
+    if (unreadCount > 0) {
+      document.title = `(${unreadCount}) Workapp`;
+    } else {
+      document.title = "Workapp";
+    }
+  }, [unreadCount]);
   
   // Initialize state from localStorage if available
   const [activeView, setActiveView] = useState<"chat" | "projects">(() => {

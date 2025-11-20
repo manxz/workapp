@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "WorkApp - Chat & Projects",
+  title: "Workapp",
   description: "Real-time chat and lightweight project management",
 };
 
