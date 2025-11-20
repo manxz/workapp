@@ -685,7 +685,7 @@ export function useChat(conversationId: string) {
             imageUrl: parentData.image_url,
             imageUrls: parentData.image_urls || undefined,
             reactions,
-            thread_id: parentData.thread_id,
+            threadId: parentData.thread_id,
             replyCount: parentData.reply_count,
             lastReplyAt: parentData.last_reply_at,
             replyAvatars: parentData.reply_avatars,
