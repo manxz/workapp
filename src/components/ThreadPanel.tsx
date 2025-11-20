@@ -85,7 +85,7 @@ export default function ThreadPanel({
       <div className="flex items-center justify-between px-4 h-14 border-b border-neutral-200 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Scribble size={18} weight="bold" className="text-neutral-900" />
-          <span className="text-[15px] font-semibold text-black">Thread</span>
+          <span className="text-base font-medium text-black">Thread</span>
         </div>
         <button
           onClick={onClose}
