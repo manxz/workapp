@@ -13,6 +13,7 @@ export type Message = {
   text: string;
   imageUrl?: string; // Legacy single image
   imageUrls?: string[]; // Multiple images
+  reactions?: Record<string, string[]>; // { emoji: [userId1, userId2, ...] }
 };
 
 export function useChat(conversationId: string) {
@@ -57,6 +58,7 @@ export function useChat(conversationId: string) {
             text: msg.text,
             imageUrl: msg.image_url, // Legacy single image
             imageUrls: msg.image_urls || undefined, // Multiple images
+            reactions: msg.reactions || undefined,
           };
         });
         setMessages(formattedMessages);
@@ -251,6 +253,7 @@ export function useChat(conversationId: string) {
               text: newMsg.text as string,
               imageUrl: newMsg.image_url as string | undefined, // Legacy single image
               imageUrls: (newMsg.image_urls as string[]) || undefined, // Multiple images
+              reactions: (newMsg.reactions as Record<string, string[]>) || undefined,
             };
           
           // Show browser notification if message is from someone else
@@ -369,6 +372,30 @@ export function useChat(conversationId: string) {
           });
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updatedMsg = payload.new as Record<string, unknown>;
+          
+          // Update the message with new data (e.g., reactions)
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === updatedMsg.id
+                ? {
+                    ...m,
+                    reactions: (updatedMsg.reactions as Record<string, string[]>) || undefined,
+                  }
+                : m
+            )
+          );
+        }
+      )
       .subscribe();
 
     return () => {
@@ -402,6 +429,59 @@ export function useChat(conversationId: string) {
     });
   }, [user]);
 
+  // Toggle reaction on a message
+  const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
+    if (!user) return;
+
+    // Find the message
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    // Calculate new reactions
+    const currentReactions = message.reactions || {};
+    const userIds = currentReactions[emoji] || [];
+    const hasReacted = userIds.includes(user.id);
+
+    let newReactions: Record<string, string[]>;
+    if (hasReacted) {
+      // Remove reaction
+      const filteredUserIds = userIds.filter(id => id !== user.id);
+      if (filteredUserIds.length === 0) {
+        // Remove emoji entirely if no users left
+        const { [emoji]: _, ...rest } = currentReactions;
+        newReactions = rest;
+      } else {
+        newReactions = { ...currentReactions, [emoji]: filteredUserIds };
+      }
+    } else {
+      // Add reaction
+      newReactions = { ...currentReactions, [emoji]: [...userIds, user.id] };
+    }
+
+    // Optimistically update UI
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, reactions: newReactions } : m
+    ));
+
+    // Update database
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ reactions: newReactions })
+        .eq('id', messageId);
+
+      if (error) {
+        console.error('Error updating reactions:', error);
+        // Revert optimistic update on error
+        setMessages(prev => prev.map(m =>
+          m.id === messageId ? { ...m, reactions: currentReactions } : m
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating reactions:', error);
+    }
+  }, [messages, user]);
+
   return {
     messages,
     sendMessage,
@@ -409,5 +489,6 @@ export function useChat(conversationId: string) {
     typingUsers,
     broadcastTyping,
     broadcastStopTyping,
+    toggleReaction,
   };
 }

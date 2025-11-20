@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, memo, useState } from "react";
-import { X } from "@phosphor-icons/react";
+import { X, ArrowBendUpLeft, Stack } from "@phosphor-icons/react";
 
 export type Message = {
   id: string;
@@ -11,10 +11,13 @@ export type Message = {
   text: string;
   imageUrl?: string; // Legacy single image
   imageUrls?: string[]; // Multiple images
+  reactions?: Record<string, string[]>; // { emoji: [userId1, userId2, ...] }
 };
 
 type ChatMessagesProps = {
   messages: Message[];
+  currentUserId?: string;
+  onReaction?: (messageId: string, emoji: string) => void;
 };
 
 // Helper function to detect and linkify URLs
@@ -44,7 +47,7 @@ function linkifyText(text: string) {
   });
 }
 
-function ChatMessages({ messages }: ChatMessagesProps) {
+function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -127,16 +130,17 @@ function ChatMessages({ messages }: ChatMessagesProps) {
                 <div className="flex-1 h-px bg-neutral-300" />
               </div>
             )}
-            <div className="flex gap-1.5 px-0 py-1.5 max-w-full">
-              {/* Avatar */}
-              <img
-                src={message.avatar}
-                alt={message.author}
-                className="w-8 h-8 rounded-full object-cover shrink-0"
-              />
-              
-              {/* Message Content */}
-              <div className="flex flex-col min-w-0 flex-1">
+            <div className="group relative -mx-4 px-4 py-1.5 hover:bg-[#F5F5F5] transition-colors">
+              <div className="flex gap-1.5 max-w-full">
+                {/* Avatar */}
+                <img
+                  src={message.avatar}
+                  alt={message.author}
+                  className="w-8 h-8 rounded-full object-cover shrink-0"
+                />
+                
+                {/* Message Content */}
+                <div className="flex flex-col min-w-0 flex-1">
                 {/* Message Header */}
                 <div className="flex items-center gap-1">
                   <span className="text-[13px] font-semibold text-black">
@@ -188,7 +192,86 @@ function ChatMessages({ messages }: ChatMessagesProps) {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Reactions */}
+                  {message.reactions && Object.keys(message.reactions).length > 0 && (
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
+                      {Object.entries(message.reactions).map(([emoji, userIds]) => {
+                        const hasReacted = currentUserId && userIds.includes(currentUserId);
+                        const count = userIds.length;
+                        
+                        return (
+                          <button
+                            key={emoji}
+                            onClick={() => onReaction?.(message.id, emoji)}
+                            className={`flex items-center gap-1 h-5 px-2 rounded-[11px] font-medium text-[11px] transition-colors ${
+                              hasReacted
+                                ? 'bg-[rgba(0,112,243,0.16)] border border-[#0070f3] text-[#0070f3]'
+                                : 'bg-[#e9e9e9] hover:bg-[#d9d9d9] text-[#6a6a6a]'
+                            }`}
+                          >
+                            <span className="text-[13px] leading-none">{emoji}</span>
+                            <span>{count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
+                
+                {/* Action Buttons - shown on hover */}
+                <div className="absolute right-4 top-[-13px] hidden group-hover:flex flex-col items-end">
+                  <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-full px-[6px] py-[2px] flex gap-1 items-center">
+                    {/* Quick Reactions */}
+                    <button 
+                      onClick={() => onReaction?.(message.id, '👍')}
+                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
+                    >
+                      <span className="text-[14px] leading-none">👍</span>
+                    </button>
+                    <button 
+                      onClick={() => onReaction?.(message.id, '❤️')}
+                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
+                    >
+                      <span className="text-[14px] leading-none">❤️</span>
+                    </button>
+                    <button 
+                      onClick={() => onReaction?.(message.id, '💯')}
+                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
+                    >
+                      <span className="text-[14px] leading-none">💯</span>
+                    </button>
+                    <button 
+                      onClick={() => onReaction?.(message.id, '😂')}
+                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
+                    >
+                      <span className="text-[14px] leading-none">😂</span>
+                    </button>
+                    <button 
+                      onClick={() => onReaction?.(message.id, '😢')}
+                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
+                    >
+                      <span className="text-[14px] leading-none">😢</span>
+                    </button>
+                    <button 
+                      onClick={() => onReaction?.(message.id, '😡')}
+                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
+                    >
+                      <span className="text-[14px] leading-none">😡</span>
+                    </button>
+                    
+                    {/* Reply */}
+                    <button className="p-[2px] hover:bg-neutral-100 rounded transition-colors">
+                      <ArrowBendUpLeft size={16} weight="regular" className="text-[#6a6a6a]" />
+                    </button>
+                    
+                    {/* More Actions */}
+                    <button className="p-[2px] hover:bg-neutral-100 rounded transition-colors">
+                      <Stack size={16} weight="regular" className="text-[#6a6a6a]" />
+                    </button>
+                  </div>
+                </div>
+              </div>
           </div>
         ))}
         <div ref={messagesEndRef} />

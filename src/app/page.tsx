@@ -158,7 +158,7 @@ export default function Home() {
         : ""
     : "";
   
-  const { messages, sendMessage, typingUsers, broadcastTyping, broadcastStopTyping } = useChat(conversationId);
+  const { messages, sendMessage, typingUsers, broadcastTyping, broadcastStopTyping, toggleReaction } = useChat(conversationId);
 
   // Reset pending files after they're passed to ChatInput
   useEffect(() => {
@@ -340,7 +340,11 @@ export default function Home() {
               />
               
               {/* Messages - scrollable, takes remaining space */}
-              <ChatMessages messages={messages} />
+              <ChatMessages 
+                messages={messages} 
+                currentUserId={user?.id}
+                onReaction={toggleReaction}
+              />
               
               {/* Input area - grows with content */}
               <ChatInput
