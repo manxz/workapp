@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Mountains } from "@phosphor-icons/react";
 import Sidebar from "@/components/Sidebar";
@@ -23,7 +23,7 @@ import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 
-export default function Home() {
+function HomeContent() {
   const { user, profile, loading } = useAuth();
   const { users } = useUsers();
   const { channels } = useChannels();
@@ -438,5 +438,17 @@ export default function Home() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <p className="text-neutral-600">Loading...</p>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
