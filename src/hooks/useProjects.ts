@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+/**
+ * Project data structure
+ */
 export type Project = {
   id: string;
   name: string;
@@ -12,6 +15,37 @@ export type Project = {
   created_at: string;
 };
 
+/**
+ * Manages project CRUD operations with real-time synchronization
+ * 
+ * @description
+ * Loads all projects on mount and subscribes to real-time updates (INSERT, UPDATE, DELETE).
+ * Automatically keeps the local state in sync with database changes across all clients.
+ * 
+ * ## Key Features
+ * - **Real-time sync**: All clients see project changes instantly
+ * - **Cascade delete**: Deleting a project also deletes all associated tasks
+ * - **Automatic loading**: Fetches projects on mount when user is authenticated
+ * 
+ * ## Important Notes
+ * - Projects are shared across all users (no RLS filtering by user)
+ * - Deleting a project cascades to tasks (ensure user confirmation!)
+ * - Loading state helps prevent UI flicker during initial fetch
+ * 
+ * @example
+ * const { projects, loading, createProject, deleteProject } = useProjects();
+ * 
+ * // Create new project
+ * const newProject = await createProject("My Project", "Description");
+ * if (newProject) {
+ *   setSelectedProject(newProject.id);
+ * }
+ * 
+ * // Delete project (with cascade)
+ * const success = await deleteProject(projectId);
+ * 
+ * @returns Project list, loading state, and CRUD functions
+ */
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);

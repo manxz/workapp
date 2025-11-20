@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+/**
+ * User profile information for DM list
+ */
 export type User = {
   id: string;
   name: string;
@@ -11,6 +14,34 @@ export type User = {
   hasUnread: boolean;
 };
 
+/**
+ * Loads user directory for direct messaging
+ * 
+ * @description
+ * Fetches all users from profiles table except the current user.
+ * Used to populate the DM sidebar. Generates fallback names and avatars
+ * for users without complete profiles.
+ * 
+ * ## Key Features
+ * - **Excludes self**: Filters out current user from results
+ * - **Fallback handling**: Generates default name/avatar if missing
+ * - **No real-time**: Static load (users don't change frequently)
+ * 
+ * ## Performance Note
+ * This hook does NOT subscribe to real-time updates. New users won't appear
+ * until page refresh. Consider adding real-time subscription if user
+ * creation is frequent.
+ * 
+ * @example
+ * const { users, loading } = useUsers();
+ * 
+ * users.forEach(user => {
+ *   // Render user in DM list
+ *   <UserListItem user={user} />
+ * });
+ * 
+ * @returns User list and loading state
+ */
 export function useUsers() {
   const { user: currentUser, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);

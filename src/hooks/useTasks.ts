@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+/**
+ * Task data structure with assignee information
+ */
 export type Task = {
   id: string;
   number: number;
@@ -18,6 +21,40 @@ export type Task = {
   created_at: string;
 };
 
+/**
+ * Manages task operations with optional project filtering and real-time sync
+ * 
+ * @description
+ * Loads tasks with assignee information via JOIN with profiles table.
+ * Optionally filters by project. Subscribes to real-time changes and reloads on any update.
+ * 
+ * ## Key Features
+ * - **Assignee JOIN**: Automatically fetches assignee name and avatar
+ * - **Project filtering**: Optional filter to show only one project's tasks
+ * - **Real-time sync**: Reloads on any task change (INSERT, UPDATE, DELETE)
+ * - **Auto-numbering**: Tasks get sequential numbers on creation
+ * 
+ * ## Performance Note
+ * Currently reloads ALL tasks on any change (simple but not optimal for large datasets).
+ * For production with many tasks, consider optimistic updates + targeted reloads.
+ * 
+ * @param projectFilter - Optional project ID to filter tasks
+ * 
+ * @example
+ * // Load all tasks
+ * const { tasks, loading, createTask } = useTasks();
+ * 
+ * // Load tasks for specific project
+ * const { tasks } = useTasks(selectedProjectId);
+ * 
+ * // Create task
+ * await createTask("Fix bug", "task", projectId);
+ * 
+ * // Update task status
+ * await updateTask(taskId, { status: "done" });
+ * 
+ * @returns Task list, loading state, and CRUD functions
+ */
 export function useTasks(projectFilter?: string) {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);

@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
+/**
+ * Channel information for sidebar display
+ */
 export type Channel = {
   id: string;
   name: string;
@@ -10,6 +13,32 @@ export type Channel = {
   hasUnread: boolean;
 };
 
+/**
+ * Loads public channels for chat sidebar
+ * 
+ * @description
+ * Fetches all public channels from database, sorted alphabetically by name.
+ * Used to populate the channel list in chat sidebar.
+ * 
+ * ## Key Features
+ * - **Public only**: Filters to `is_public = true` channels
+ * - **Alphabetical sort**: Ordered by name ascending
+ * - **No real-time**: Static load (channels don't change frequently)
+ * 
+ * ## Future Enhancement
+ * Consider adding real-time subscription if channel creation/deletion
+ * becomes frequent. Currently requires page refresh to see new channels.
+ * 
+ * @example
+ * const { channels, loading } = useChannels();
+ * 
+ * channels.forEach(channel => {
+ *   // Render channel in sidebar
+ *   <ChannelListItem channel={channel} />
+ * });
+ * 
+ * @returns Channel list and loading state
+ */
 export function useChannels() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);

@@ -4,6 +4,39 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+/**
+ * Manages unread message notifications with localStorage persistence
+ * 
+ * @description
+ * Tracks which conversations have unread messages using a Set stored in localStorage.
+ * Subscribes to real-time message INSERTs to automatically mark conversations as unread.
+ * 
+ * ## Key Features
+ * - **Persistence**: Unread state survives page refreshes (localStorage)
+ * - **Real-time**: Auto-updates when new messages arrive
+ * - **User-specific**: Each user has their own unread state
+ * - **Manual control**: Can mark conversations as read/unread
+ * 
+ * ## Data Flow
+ * 1. Load unread Set from localStorage on mount
+ * 2. Subscribe to all message INSERTs
+ * 3. When message from other user arrives → mark conversation unread
+ * 4. User opens conversation → call markAsRead()
+ * 5. Save to localStorage on every change
+ * 
+ * @example
+ * const { hasUnread, markAsRead, unreadConversations } = useUnreadMessages();
+ * 
+ * // Check if conversation has unread
+ * if (hasUnread('channel-123')) {
+ *   // Show blue dot
+ * }
+ * 
+ * // Mark as read when user opens conversation
+ * markAsRead('channel-123');
+ * 
+ * @returns Unread state and control functions
+ */
 export function useUnreadMessages() {
   const { user } = useAuth();
   const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set());
