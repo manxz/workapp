@@ -61,6 +61,22 @@ export default function ThreadPanel({
     previousReplyCountRef.current = currentCount;
   }, [replies, scrollToBottom]);
 
+  // Keep scroll at bottom when container resizes (input grows)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      scrollToBottom();
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [scrollToBottom]);
+
   const allMessages = [parentMessage, ...replies];
 
   return (
@@ -81,8 +97,8 @@ export default function ThreadPanel({
       </div>
 
       {/* Messages */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0">
-        <div className="px-4 py-4 flex flex-col justify-end min-h-full">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="px-4 py-4" style={{ marginTop: 'auto' }}>
           {allMessages.map((message, index) => {
             const prevMessage = index > 0 ? allMessages[index - 1] : null;
             const showDivider = shouldShowDateDivider(message.timestamp, prevMessage?.timestamp || null);
@@ -198,18 +214,16 @@ export default function ThreadPanel({
         </div>
       </div>
 
-      {/* Input - reuse ChatInput component */}
-      <div className="flex-shrink-0">
-        <ChatInput
-          channelName="Thread"
-          onSendMessage={(text) => onSendReply(text)}
-          onTyping={() => onTyping?.(parentMessage.id)}
-          onStopTyping={() => onStopTyping?.(parentMessage.id)}
-        />
-        
-        {/* Typing Indicator - only show users typing in this thread */}
-        <TypingIndicator typingUsers={threadTypingUsers} />
-      </div>
+      {/* Input area - grows with content */}
+      <ChatInput
+        channelName="Thread"
+        onSendMessage={(text) => onSendReply(text)}
+        onTyping={() => onTyping?.(parentMessage.id)}
+        onStopTyping={() => onStopTyping?.(parentMessage.id)}
+      />
+      
+      {/* Typing Indicator - only show users typing in this thread */}
+      <TypingIndicator typingUsers={threadTypingUsers} />
     </div>
   );
 }
