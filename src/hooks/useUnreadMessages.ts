@@ -5,24 +5,29 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
 /**
- * Manages unread message notifications with localStorage persistence
+ * Manages unread message notifications with database persistence
  * 
  * @description
- * Tracks which conversations have unread messages using a Set stored in localStorage.
- * Subscribes to real-time message INSERTs to automatically mark conversations as unread.
+ * Tracks which conversations have unread messages by comparing the last message timestamp
+ * with when the user last read the conversation. Uses Supabase database for persistence,
+ * so unread status syncs across all devices in real-time.
  * 
  * ## Key Features
- * - **Persistence**: Unread state survives page refreshes (localStorage)
- * - **Real-time**: Auto-updates when new messages arrive
- * - **User-specific**: Each user has their own unread state
- * - **Manual control**: Can mark conversations as read/unread
+ * - **Database-backed**: Survives page refreshes and syncs across devices
+ * - **Real-time**: Auto-updates when new messages arrive or conversations are read
+ * - **Accurate**: Compares message timestamps with last_read_at
+ * - **Efficient**: Uses indexed queries for fast lookups
  * 
- * ## Data Flow
- * 1. Load unread Set from localStorage on mount
- * 2. Subscribe to all message INSERTs
- * 3. When message from other user arrives → mark conversation unread
- * 4. User opens conversation → call markAsRead()
- * 5. Save to localStorage on every change
+ * ## How It Works
+ * 1. On mount, fetch all conversations with unread messages
+ * 2. Subscribe to new message INSERTs to detect unread
+ * 3. Subscribe to read_status changes to sync across tabs/devices
+ * 4. When user opens conversation → call markAsRead() → updates database
+ * 5. All devices receive real-time update and remove blue dot
+ * 
+ * ## Migration from localStorage
+ * Previous implementation used localStorage which didn't sync across devices.
+ * New implementation uses conversation_read_status table in database.
  * 
  * @example
  * const { hasUnread, markAsRead, unreadConversations } = useUnreadMessages();
@@ -41,47 +46,103 @@ export function useUnreadMessages() {
   const { user } = useAuth();
   const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set());
 
-  // Load unread status from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined' && user) {
-      const stored = localStorage.getItem(`unread_${user.id}`);
-      if (stored) {
-        setUnreadConversations(new Set(JSON.parse(stored)));
-      }
+  // Load unread conversations from database
+  const loadUnreadConversations = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      // Get user's read status for all conversations
+      const { data: readStatus, error: readError } = await supabase
+        .from('conversation_read_status')
+        .select('conversation_id, last_read_at')
+        .eq('user_id', user.id);
+
+      if (readError) throw readError;
+
+      // Build a map of conversation_id -> last_read_at
+      const readMap = new Map<string, string>();
+      readStatus?.forEach(status => {
+        readMap.set(status.conversation_id, status.last_read_at);
+      });
+
+      // Get all conversations and check for unread messages
+      const { data: allMessages, error: messagesError } = await supabase
+        .from('messages')
+        .select('conversation_id, created_at, author_id')
+        .is('thread_id', null) // Only top-level messages
+        .order('created_at', { ascending: false });
+
+      if (messagesError) throw messagesError;
+
+      // Find conversations with unread messages
+      const unread = new Set<string>();
+      const conversationLatestMessage = new Map<string, { timestamp: string; authorId: string }>();
+
+      // Get the latest message for each conversation
+      allMessages?.forEach(msg => {
+        if (!conversationLatestMessage.has(msg.conversation_id)) {
+          conversationLatestMessage.set(msg.conversation_id, {
+            timestamp: msg.created_at,
+            authorId: msg.author_id
+          });
+        }
+      });
+
+      // Check each conversation for unread messages
+      conversationLatestMessage.forEach((latest, conversationId) => {
+        const lastRead = readMap.get(conversationId);
+        
+        // Mark as unread if:
+        // 1. User has never read this conversation, OR
+        // 2. Latest message is newer than last_read_at, AND
+        // 3. Latest message is not from the current user
+        if (latest.authorId !== user.id) {
+          if (!lastRead || new Date(latest.timestamp) > new Date(lastRead)) {
+            unread.add(conversationId);
+          }
+        }
+      });
+
+      setUnreadConversations(unread);
+    } catch (error) {
+      console.error('Error loading unread conversations:', error);
     }
   }, [user]);
 
-  // Save to localStorage whenever it changes
+  // Load on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && user) {
-      localStorage.setItem(`unread_${user.id}`, JSON.stringify(Array.from(unreadConversations)));
-    }
-  }, [unreadConversations, user]);
+    loadUnreadConversations();
+  }, [loadUnreadConversations]);
 
   // Mark a conversation as read
-  const markAsRead = useCallback((conversationId: string) => {
-    setUnreadConversations((prev) => {
-      const next = new Set(prev);
-      next.delete(conversationId);
-      return next;
-    });
-  }, []);
+  const markAsRead = useCallback(async (conversationId: string) => {
+    if (!user) return;
 
-  // Mark a conversation as unread
-  const markAsUnread = useCallback((conversationId: string) => {
-    setUnreadConversations((prev) => {
-      const next = new Set(prev);
-      next.add(conversationId);
-      return next;
-    });
-  }, []);
+    try {
+      // Call the database function to mark as read
+      const { error } = await supabase.rpc('mark_conversation_read', {
+        p_conversation_id: conversationId
+      });
+
+      if (error) throw error;
+
+      // Optimistically update local state
+      setUnreadConversations((prev) => {
+        const next = new Set(prev);
+        next.delete(conversationId);
+        return next;
+      });
+    } catch (error) {
+      console.error('Error marking conversation as read:', error);
+    }
+  }, [user]);
 
   // Subscribe to new messages to mark conversations as unread
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel("unread-messages")
+      .channel("unread-messages-realtime")
       .on(
         "postgres_changes",
         {
@@ -92,9 +153,49 @@ export function useUnreadMessages() {
         (payload) => {
           const newMsg = payload.new as Record<string, unknown>;
           // Only mark as unread if message is from someone else
-          if ((newMsg.author_id as string) !== user.id) {
-            markAsUnread(newMsg.conversation_id as string);
+          if ((newMsg.author_id as string) !== user.id && !newMsg.thread_id) {
+            setUnreadConversations((prev) => {
+              const next = new Set(prev);
+              next.add(newMsg.conversation_id as string);
+              return next;
+            });
           }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "conversation_read_status",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // When user marks as read on another device, sync here
+          const status = payload.new as Record<string, unknown>;
+          setUnreadConversations((prev) => {
+            const next = new Set(prev);
+            next.delete(status.conversation_id as string);
+            return next;
+          });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "conversation_read_status",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // When user marks as read on another device, sync here
+          const status = payload.new as Record<string, unknown>;
+          setUnreadConversations((prev) => {
+            const next = new Set(prev);
+            next.delete(status.conversation_id as string);
+            return next;
+          });
         }
       )
       .subscribe();
@@ -102,13 +203,11 @@ export function useUnreadMessages() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, markAsUnread]);
+  }, [user]);
 
   return {
     unreadConversations,
     markAsRead,
-    markAsUnread,
     hasUnread: (conversationId: string) => unreadConversations.has(conversationId),
   };
 }
-
