@@ -2,9 +2,8 @@ import { ComponentType } from 'react';
 
 /**
  * Available app IDs in the system
- * NOTE: More apps (todo, crm) can be added here in the future
  */
-export type AppId = 'chat' | 'projects';
+export type AppId = 'chat' | 'projects' | 'notes' | 'crm';
 
 /**
  * App metadata and configuration
@@ -25,8 +24,17 @@ export type AppDefinition = {
   /** Whether this app is enabled by default for new users */
   defaultEnabled: boolean;
   
-  /** Short description for settings */
-  description?: string;
+  /** Short description for App Library */
+  description: string;
+  
+  /** Category for grouping in App Library (e.g., "Productivity", "Sales") */
+  category: string;
+  
+  /** Whether this app can be disabled by users (Chat is always enabled) */
+  canDisable: boolean;
+  
+  /** Whether this app is still in development (shows WIP badge) */
+  isWIP: boolean;
 };
 
 /**

@@ -1,16 +1,28 @@
 "use client";
 
-import { House, ChatCenteredText, Cube, SignOut } from "@phosphor-icons/react";
+import { House, ChatCenteredText, Cube, Plus, SignOut } from "@phosphor-icons/react";
 import { useAuth } from "@/contexts/AuthContext";
 
 type SidebarProps = {
-  activeView: "chat" | "projects";
-  onViewChange: (view: "chat" | "projects") => void;
+  activeView: "chat" | "projects" | "apps";
+  onViewChange: (view: "chat" | "projects" | "apps") => void;
   hasUnreadMessages?: boolean;
+  enabledApps: (appId: string) => boolean;
+  appsLoading: boolean;
 };
 
-export default function Sidebar({ activeView, onViewChange, hasUnreadMessages = false }: SidebarProps) {
+export default function Sidebar({ 
+  activeView, 
+  onViewChange, 
+  hasUnreadMessages = false,
+  enabledApps,
+  appsLoading,
+}: SidebarProps) {
   const { signOut } = useAuth();
+
+  // Only show enabled apps (wait for loading to complete to prevent flash)
+  const showChat = !appsLoading && enabledApps('chat');
+  const showProjects = !appsLoading && enabledApps('projects');
 
   return (
     <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen items-center px-0 py-4 w-16 fixed left-0 top-0">
@@ -23,35 +35,52 @@ export default function Sidebar({ activeView, onViewChange, hasUnreadMessages = 
 
       {/* Nav Container - 32x32 boxes with 16x16 icons */}
       <div className="flex flex-col gap-0.5 items-center w-full">
-          {/* Chat Icon */}
-          <button
-            onClick={() => onViewChange("chat")}
-            className={`flex items-center justify-center rounded-[7px] relative w-8 h-8 transition-colors ${
-              activeView === "chat" ? "bg-neutral-200" : "hover:bg-neutral-200"
-            }`}
-          >
-            <ChatCenteredText
-              size={16}
-              weight={activeView === "chat" ? "fill" : "regular"}
-            />
-            {/* Notification dot - only shows when there are unread messages */}
-            {hasUnreadMessages && (
-              <div className="absolute top-2 left-5 w-1.5 h-1.5 bg-blue-600 rounded-full border border-neutral-200" />
-            )}
-          </button>
+          {/* Chat Icon - Only show if enabled */}
+          {showChat && (
+            <button
+              onClick={() => onViewChange("chat")}
+              className={`flex items-center justify-center rounded-[7px] relative w-8 h-8 transition-colors ${
+                activeView === "chat" ? "bg-neutral-200" : "hover:bg-neutral-200"
+              }`}
+            >
+              <ChatCenteredText
+                size={16}
+                weight={activeView === "chat" ? "fill" : "regular"}
+              />
+              {/* Notification dot - only shows when there are unread messages */}
+              {hasUnreadMessages && (
+                <div className="absolute top-2 left-5 w-1.5 h-1.5 bg-blue-600 rounded-full border border-neutral-200" />
+              )}
+            </button>
+          )}
 
-          {/* Projects/Cube Icon */}
+          {/* Projects/Cube Icon - Only show if enabled */}
+          {showProjects && (
+            <button
+              onClick={() => onViewChange("projects")}
+              className={`flex items-center justify-center rounded-[7px] w-8 h-8 transition-colors ${
+                activeView === "projects"
+                  ? "bg-neutral-200"
+                  : "hover:bg-neutral-200"
+              }`}
+            >
+              <Cube
+                size={16}
+                weight={activeView === "projects" ? "fill" : "regular"}
+              />
+            </button>
+          )}
+
+          {/* Plus Icon - Opens App Library (always visible) */}
           <button
-            onClick={() => onViewChange("projects")}
+            onClick={() => onViewChange("apps")}
             className={`flex items-center justify-center rounded-[7px] w-8 h-8 transition-colors ${
-              activeView === "projects"
-                ? "bg-neutral-200"
-                : "hover:bg-neutral-200"
+              activeView === "apps" ? "bg-neutral-200" : "hover:bg-neutral-200"
             }`}
           >
-            <Cube
+            <Plus
               size={16}
-              weight={activeView === "projects" ? "fill" : "regular"}
+              weight={activeView === "apps" ? "bold" : "regular"}
             />
           </button>
       </div>

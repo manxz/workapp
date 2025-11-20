@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Plus, Article, ListBullets, Kanban, CheckCircle, Prohibit, Gear } from "@phosphor-icons/react";
-import { useTasks, type Task } from "@/hooks/useTasks";
+import type { Task } from "@/hooks/useTasks";
 import NewIssueModal from "./NewIssueModal";
 import DeleteProjectModal from "./DeleteProjectModal";
 import {
@@ -19,11 +19,20 @@ import {
 type ProjectsViewProps = {
   selectedProject: string;
   projectName: string;
+  tasks: Task[];
   onDeleteProject?: (projectId: string) => void;
+  onCreateTask: (title: string, type: "task" | "feature", projectId: string) => Promise<void>;
+  onUpdateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
 };
 
-export default function ProjectsView({ selectedProject, projectName, onDeleteProject }: ProjectsViewProps) {
-  const { tasks, createTask, updateTask } = useTasks(selectedProject);
+export default function ProjectsView({ 
+  selectedProject, 
+  projectName, 
+  tasks,
+  onDeleteProject,
+  onCreateTask,
+  onUpdateTask,
+}: ProjectsViewProps) {
   const [filter, setFilter] = useState<"all" | "todo" | "in_progress" | "backlog" | "blocked">("all");
   const [showModal, setShowModal] = useState(false);
   const [view, setView] = useState<"list" | "board">("list");
@@ -61,7 +70,7 @@ export default function ProjectsView({ selectedProject, projectName, onDeletePro
   }, [showGearMenu]);
 
   const handleCreateTask = async (title: string, description: string, type: "task" | "feature") => {
-    await createTask(title, type, selectedProject);
+    await onCreateTask(title, type, selectedProject);
   };
 
   return (
@@ -227,7 +236,7 @@ export default function ProjectsView({ selectedProject, projectName, onDeletePro
                 <TaskRow
                   key={task.id}
                   task={task}
-                  onStatusChange={(status) => updateTask(task.id, { status })}
+                  onStatusChange={(status) => onUpdateTask(task.id, { status })}
                 />
               ))}
             </div>
@@ -253,7 +262,7 @@ export default function ProjectsView({ selectedProject, projectName, onDeletePro
                 <TaskRow
                   key={task.id}
                   task={task}
-                  onStatusChange={(status) => updateTask(task.id, { status })}
+                  onStatusChange={(status) => onUpdateTask(task.id, { status })}
                 />
               ))}
             </div>
@@ -279,7 +288,7 @@ export default function ProjectsView({ selectedProject, projectName, onDeletePro
                 <TaskRow
                   key={task.id}
                   task={task}
-                  onStatusChange={(status) => updateTask(task.id, { status })}
+                  onStatusChange={(status) => onUpdateTask(task.id, { status })}
                 />
               ))}
             </div>
@@ -305,7 +314,7 @@ export default function ProjectsView({ selectedProject, projectName, onDeletePro
                 <TaskRow
                   key={task.id}
                   task={task}
-                  onStatusChange={(status) => updateTask(task.id, { status })}
+                  onStatusChange={(status) => onUpdateTask(task.id, { status })}
                 />
               ))}
             </div>
@@ -331,7 +340,7 @@ export default function ProjectsView({ selectedProject, projectName, onDeletePro
                 <TaskRow
                   key={task.id}
                   task={task}
-                  onStatusChange={(status) => updateTask(task.id, { status })}
+                  onStatusChange={(status) => onUpdateTask(task.id, { status })}
                 />
               ))}
             </div>
@@ -348,7 +357,7 @@ export default function ProjectsView({ selectedProject, projectName, onDeletePro
           ) : (
             <KanbanBoard 
               tasks={tasks} 
-              onStatusChange={(taskId, status) => updateTask(taskId, { status })}
+              onStatusChange={(taskId, status) => onUpdateTask(taskId, { status })}
             />
           )
         )}

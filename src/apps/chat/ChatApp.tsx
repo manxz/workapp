@@ -11,10 +11,15 @@ import ThreadPanel from "@/components/ThreadPanel";
 import TypingIndicator from "@/components/TypingIndicator";
 import NotificationPrompt from "@/components/NotificationPrompt";
 import { useAuth } from "@/contexts/AuthContext";
-import { useChannels } from "@/hooks/useChannels";
-import { useUsers } from "@/hooks/useUsers";
 import { useChat } from "@/hooks/useChat";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import type { Channel } from "@/hooks/useChannels";
+import type { User } from "@/hooks/useUsers";
+
+interface ChatAppProps {
+  channels: Channel[];
+  users: User[];
+}
 
 /**
  * Chat App Module
@@ -29,15 +34,14 @@ import { useUnreadMessages } from "@/hooks/useUnreadMessages";
  * - Unread message tracking
  * 
  * This is extracted from the main page.tsx for code splitting.
+ * Receives channels and users as props (lifted to page.tsx) to prevent refetching on app switch.
  */
-export default function ChatApp() {
+export default function ChatApp({ channels, users }: ChatAppProps) {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const threadIdFromUrl = searchParams.get("thread");
 
-  const { channels } = useChannels();
-  const { users } = useUsers();
   const { hasUnread, markAsRead } = useUnreadMessages();
 
   // Restore last conversation from localStorage

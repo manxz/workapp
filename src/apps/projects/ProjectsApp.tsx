@@ -3,8 +3,18 @@
 import { useState, useMemo, useEffect } from "react";
 import ProjectsSidebar from "@/components/ProjectsSidebar";
 import ProjectsView from "@/components/ProjectsView";
-import { useProjects } from "@/hooks/useProjects";
-import { useTasks } from "@/hooks/useTasks";
+import type { Project } from "@/hooks/useProjects";
+import type { Task } from "@/hooks/useTasks";
+
+interface ProjectsAppProps {
+  projects: Project[];
+  tasks: Task[];
+  createProject: (name: string, description?: string) => Promise<any>;
+  deleteProject: (id: string) => Promise<boolean>;
+  createTask: (title: string, type: "task" | "feature", projectId: string) => Promise<void>;
+  updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+}
 
 /**
  * Projects App Module
@@ -16,10 +26,17 @@ import { useTasks } from "@/hooks/useTasks";
  * - Project creation and deletion
  * 
  * This is extracted from the main page.tsx for code splitting.
+ * Receives projects and tasks as props (lifted to page.tsx) to prevent refetching on app switch.
  */
-export default function ProjectsApp() {
-  const { projects, createProject, deleteProject } = useProjects();
-  const { tasks } = useTasks(); // Load all tasks
+export default function ProjectsApp({
+  projects,
+  tasks,
+  createProject,
+  deleteProject,
+  createTask,
+  updateTask,
+  deleteTask,
+}: ProjectsAppProps) {
   
   // Calculate task counts per project
   const taskCounts = useMemo(() => {
@@ -104,7 +121,10 @@ export default function ProjectsApp() {
           <ProjectsView 
             selectedProject={selectedProject}
             projectName={projects.find(p => p.id === selectedProject)?.name || "General"}
+            tasks={tasks.filter(t => t.project === selectedProject)}
             onDeleteProject={handleDeleteProject}
+            onCreateTask={createTask}
+            onUpdateTask={updateTask}
           />
         )}
       </main>

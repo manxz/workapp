@@ -7,6 +7,11 @@ import Login from "@/components/Login";
 import ProfileSetup from "@/components/ProfileSetup";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useAppPreferences } from "@/hooks/useAppPreferences";
+import { useChannels } from "@/hooks/useChannels";
+import { useUsers } from "@/hooks/useUsers";
+import { useProjects } from "@/hooks/useProjects";
+import { useTasks } from "@/hooks/useTasks";
 import { AppProvider, AppCommunication } from "@/apps/AppContext";
 import { AVAILABLE_APPS } from "@/apps/registry";
 
@@ -21,9 +26,19 @@ const ProjectsApp = dynamic(() => import("@/apps/projects/ProjectsApp"), {
   ssr: false,
 });
 
+const AppLibraryView = dynamic(() => import("@/apps/library/AppLibraryView"), {
+  loading: () => <div className="flex-1 flex items-center justify-center"><p className="text-neutral-600">Loading Apps...</p></div>,
+  ssr: false,
+});
+
 function HomeContent() {
   const { user, profile, loading } = useAuth();
   const { unreadCount } = useUnreadMessages();
+  const { isAppEnabled, toggleApp, loading: appsLoading } = useAppPreferences();
+  const { channels, loading: channelsLoading } = useChannels();
+  const { users, loading: usersLoading } = useUsers();
+  const { projects, createProject, deleteProject, loading: projectsLoading } = useProjects();
+  const { tasks, createTask, updateTask, deleteTask, loading: tasksLoading } = useTasks();
   
   // Update browser tab title with unread count
   useEffect(() => {
@@ -35,10 +50,10 @@ function HomeContent() {
   }, [unreadCount]);
   
   // Initialize active view from localStorage
-  const [activeView, setActiveView] = useState<"chat" | "projects">(() => {
+  const [activeView, setActiveView] = useState<"chat" | "projects" | "apps">(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem("activeView");
-      return (saved as "chat" | "projects") || "chat";
+      return (saved as "chat" | "projects" | "apps") || "chat";
     }
     return "chat";
   });
@@ -50,12 +65,25 @@ function HomeContent() {
     }
   }, [activeView]);
 
+  // Redirect if current app is disabled
+  useEffect(() => {
+    if (appsLoading) return;
+
+    // If viewing a disabled app, redirect to chat or apps
+    if (activeView === "projects" && !isAppEnabled("projects")) {
+      setActiveView("chat");
+    } else if (activeView === "chat" && !isAppEnabled("chat")) {
+      // Chat should never be disabled, but just in case
+      setActiveView("apps");
+    }
+  }, [activeView, isAppEnabled, appsLoading]);
+
   // Cross-app communication interface
   const appCommunication: AppCommunication = {
     navigateToApp: (appId: string, params?: Record<string, any>) => {
       // Navigate to different app
-      if (appId === 'chat' || appId === 'projects') {
-        setActiveView(appId);
+      if (appId === 'chat' || appId === 'projects' || appId === 'apps') {
+        setActiveView(appId as "chat" | "projects" | "apps");
       }
       // In the future, handle params for deep linking
       // e.g., navigateToApp('projects', { projectId: '123', taskId: '456' })
@@ -104,15 +132,29 @@ function HomeContent() {
   return (
     <AppProvider value={appCommunication}>
       <div className="flex min-h-screen bg-white">
-        {/* Main Sidebar */}
+        {/* Main Sidebar - Pass app preferences down */}
         <Sidebar
           activeView={activeView}
           onViewChange={setActiveView}
           hasUnreadMessages={unreadCount > 0}
+          enabledApps={isAppEnabled}
+          appsLoading={appsLoading}
         />
 
         {/* Render Active App */}
-        {activeView === "chat" ? <ChatApp /> : <ProjectsApp />}
+        {activeView === "chat" && <ChatApp channels={channels} users={users} />}
+        {activeView === "projects" && (
+          <ProjectsApp
+            projects={projects}
+            tasks={tasks}
+            createProject={createProject}
+            deleteProject={deleteProject}
+            createTask={createTask}
+            updateTask={updateTask}
+            deleteTask={deleteTask}
+          />
+        )}
+        {activeView === "apps" && <AppLibraryView sharedToggleApp={toggleApp} sharedIsAppEnabled={isAppEnabled} />}
       </div>
     </AppProvider>
   );
