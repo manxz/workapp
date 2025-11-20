@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef, memo, useState } from "react";
+import { useEffect, useRef, memo, useState, useCallback } from "react";
 import { X, ArrowBendUpLeft, Stack } from "@phosphor-icons/react";
 import ThreadSummary from "./ThreadSummary";
+import { formatTime, formatDateDivider, shouldShowDateDivider } from "@/lib/dateUtils";
+import { linkifyText } from "@/lib/textUtils";
+import { QUICK_REACTIONS, COLORS } from "@/lib/constants";
 
 export type Message = {
   id: string;
@@ -26,44 +29,21 @@ type ChatMessagesProps = {
   onOpenThread?: (messageId: string) => void;
 };
 
-// Helper function to detect and linkify URLs
-function linkifyText(text: string) {
-  // Match URLs with protocol (http/https) OR www. OR common domain patterns
-  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|(?:[a-zA-Z0-9-]+\.)+(?:com|org|net|edu|gov|io|co|dev|app|ai|xyz|tech|me|info|biz|us|uk|ca|de|jp|fr|au|in|br|cn|ru|nl|se|no|dk|fi|it|es|pl|ch|at|be|cz|gr|hu|ie|il|nz|pt|ro|sg|za|kr|mx|ar|cl|my|ph|th|tw|vn|id|pk|bd|ua|ng|eg|ke|tz|gh|ug|zm|zw|ao|bw|cd|ci|cm|et|ga|gn|lr|mg|ml|mz|ne|rw|sd|sn|so|sz|tg|tn|ye|af|am|az|by|ge|kg|kz|lk|md|mn|tj|tm|uz|ba|bg|ee|hr|lt|lv|mk|rs|si|sk|al|ad|cy|fo|gi|is|li|mc|mt|sm|va)[^\s]*)/gi;
-  const parts = text.split(urlRegex);
-  
-  return parts.map((part, index) => {
-    if (part.match(urlRegex)) {
-      // Add https:// if the URL doesn't have a protocol
-      const href = part.match(/^https?:\/\//) ? part : `https://${part}`;
-      
-      return (
-        <a
-          key={index}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[#0070F3] hover:underline"
-        >
-          {part}
-        </a>
-      );
-    }
-    return part;
-  });
-}
-
 function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const previousMessageCountRef = useRef(0);
 
-  const scrollToBottom = () => {
+  /**
+   * Scrolls the message container to the bottom
+   * Used when new messages arrive or container resizes
+   */
+  const scrollToBottom = useCallback(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
-  };
+  }, []);
 
   // Only scroll to bottom when new messages are added, not when existing messages update (e.g., reactions)
   useEffect(() => {
@@ -76,7 +56,7 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
     }
     
     previousMessageCountRef.current = currentCount;
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   // Keep scroll at bottom when container resizes (input grows)
   useEffect(() => {
@@ -92,52 +72,18 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
     return () => {
       resizeObserver.disconnect();
     };
-  }, []);
-
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const formatDateDivider = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Check if it's today
-    if (date.toDateString() === today.toDateString()) {
-      return "Today";
-    }
-    // Check if it's yesterday
-    if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday";
-    }
-    // Otherwise return formatted date
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const shouldShowDateDivider = (currentMsg: Message, prevMsg: Message | null) => {
-    if (!prevMsg) return true;
-    const currentDate = new Date(currentMsg.timestamp).toDateString();
-    const prevDate = new Date(prevMsg.timestamp).toDateString();
-    return currentDate !== prevDate;
-  };
+  }, [scrollToBottom]);
 
   return (
     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ display: 'flex', flexDirection: 'column' }}>
       <div className="px-4 py-4" style={{ marginTop: 'auto' }}>
-        {messages.map((message, index) => (
+        {messages.map((message, index) => {
+          const prevMessage = index > 0 ? messages[index - 1] : null;
+          const showDivider = shouldShowDateDivider(message.timestamp, prevMessage?.timestamp || null);
+          
+          return (
           <div key={message.id}>
-            {shouldShowDateDivider(message, index > 0 ? messages[index - 1] : null) && (
+            {showDivider && (
               <div className="flex items-center justify-center gap-1.5 -mx-4 px-0 py-1.5">
                 <div className="flex-1 h-px bg-neutral-300" />
                 <p className="text-[11px] font-medium text-neutral-500 opacity-80 whitespace-nowrap px-1.5">
@@ -219,11 +165,31 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
                           <button
                             key={emoji}
                             onClick={() => onReaction?.(message.id, emoji)}
-                            className={`flex items-center gap-1 h-5 px-2 rounded-[11px] font-medium text-[11px] transition-colors ${
+                            className="flex items-center gap-1 h-5 px-2 rounded-[11px] font-medium text-[11px] transition-colors"
+                            style={
                               hasReacted
-                                ? 'bg-[rgba(0,112,243,0.16)] border border-[#0070f3] text-[#0070f3]'
-                                : 'bg-[#e9e9e9] hover:bg-[#d9d9d9] text-[#6a6a6a]'
-                            }`}
+                                ? {
+                                    backgroundColor: COLORS.reactionActiveBackground,
+                                    borderWidth: '1px',
+                                    borderStyle: 'solid',
+                                    borderColor: COLORS.reactionActiveBorder,
+                                    color: COLORS.reactionActiveText,
+                                  }
+                                : {
+                                    backgroundColor: COLORS.reactionInactiveBackground,
+                                    color: COLORS.reactionInactiveText,
+                                  }
+                            }
+                            onMouseEnter={(e) => {
+                              if (!hasReacted) {
+                                e.currentTarget.style.backgroundColor = COLORS.reactionInactiveHover;
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!hasReacted) {
+                                e.currentTarget.style.backgroundColor = COLORS.reactionInactiveBackground;
+                              }
+                            }}
                           >
                             <span className="text-[13px] leading-none">{emoji}</span>
                             <span>{count}</span>
@@ -247,44 +213,17 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
               
               {/* Action Buttons - shown on hover */}
               <div className="absolute right-4 top-[-13px] hidden group-hover:flex flex-col items-end">
-                  <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-full px-[6px] py-[2px] flex gap-1 items-center">
+                  <div className="bg-white border rounded-full px-[6px] py-[2px] flex gap-1 items-center" style={{ borderColor: COLORS.actionBorder }}>
                     {/* Quick Reactions */}
-                    <button 
-                      onClick={() => onReaction?.(message.id, '👍')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">👍</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '❤️')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">❤️</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '💯')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">💯</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '😂')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">😂</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '😢')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">😢</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '😡')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">😡</span>
-                    </button>
+                    {QUICK_REACTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => onReaction?.(message.id, emoji)}
+                        className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
+                      >
+                        <span className="text-[14px] leading-none">{emoji}</span>
+                      </button>
+                    ))}
                     
                     {/* Reply */}
                     <button 
@@ -302,7 +241,8 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
                 </div>
               </div>
             </div>
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 

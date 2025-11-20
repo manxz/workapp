@@ -2,6 +2,12 @@
 
 import { Smiley, At, Paperclip, ArrowUp, X } from "@phosphor-icons/react";
 import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  MAX_FILE_UPLOADS,
+  MAX_IMAGE_PREVIEW_HEIGHT,
+  TEXTAREA_MAX_HEIGHT,
+  TYPING_BROADCAST_DELAY,
+} from "@/lib/constants";
 
 type ChatInputProps = {
   channelName?: string;
@@ -57,9 +63,9 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
     
     if (newImageFiles.length > 0) {
       setUploadedFiles((prev) => {
-        // Cap at 10 files maximum
+        // Cap at maximum allowed file uploads
         const combined = [...prev, ...newImageFiles];
-        return combined.slice(0, 10);
+        return combined.slice(0, MAX_FILE_UPLOADS);
       });
       
       // Read all files and collect preview URLs
@@ -76,9 +82,9 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
       // Update preview URLs once all files are read
       Promise.all(readerPromises).then((urls) => {
         setPreviewUrls((prev) => {
-          // Cap at 10 preview URLs maximum
+          // Cap at maximum allowed preview URLs
           const combined = [...prev, ...urls];
-          return combined.slice(0, 10);
+          return combined.slice(0, MAX_FILE_UPLOADS);
         });
       });
     }
@@ -118,10 +124,10 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
         clearTimeout(typingTimeoutRef.current);
       }
       
-      // Set new timeout to stop typing after 2 seconds of inactivity
+      // Set new timeout to stop typing after inactivity
       typingTimeoutRef.current = setTimeout(() => {
         onStopTyping?.();
-      }, 2000);
+      }, TYPING_BROADCAST_DELAY);
     } else {
       // Empty input, stop typing immediately
       onStopTyping?.();
@@ -151,9 +157,9 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "";
-      const newHeight = Math.min(textarea.scrollHeight, 400);
+      const newHeight = Math.min(textarea.scrollHeight, TEXTAREA_MAX_HEIGHT);
       textarea.style.height = `${newHeight}px`;
-      textarea.style.overflowY = textarea.scrollHeight > 400 ? "auto" : "hidden";
+      textarea.style.overflowY = textarea.scrollHeight > TEXTAREA_MAX_HEIGHT ? "auto" : "hidden";
     }
   }, [message]);
 
@@ -198,7 +204,8 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
                   <img 
                     src={url} 
                     alt={`Upload preview ${index + 1}`} 
-                    className="rounded max-h-[160px] max-w-[200px] object-contain"
+                    className="rounded max-w-[200px] object-contain"
+                    style={{ maxHeight: `${MAX_IMAGE_PREVIEW_HEIGHT}px` }}
                   />
                 </div>
               ))}
@@ -212,7 +219,8 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             placeholder={`Message ${channelName}`}
-            className="w-full bg-transparent outline-none text-[13px] font-medium text-neutral-600 placeholder:text-neutral-400 placeholder:opacity-70 resize-none max-h-[400px] leading-[20px] py-[2px] box-border"
+            className="w-full bg-transparent outline-none text-[13px] font-medium text-neutral-600 placeholder:text-neutral-400 placeholder:opacity-70 resize-none leading-[20px] py-[2px] box-border"
+            style={{ maxHeight: `${TEXTAREA_MAX_HEIGHT}px` }}
             rows={1}
           />
         </div>

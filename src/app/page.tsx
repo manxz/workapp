@@ -33,9 +33,8 @@ export default function Home() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // Calculate total unread count
+  // Calculate total unread count for browser tab title
   const unreadCount = unreadConversations.size;
-  const hasUnreadMessages = unreadCount > 0;
   
   // Update browser tab title with unread count
   useEffect(() => {
@@ -316,7 +315,7 @@ export default function Home() {
       <Sidebar
         activeView={activeView}
         onViewChange={setActiveView}
-        hasUnreadMessages={hasUnreadMessages}
+        hasUnreadMessages={unreadCount > 0}
       />
       {activeView === "chat" && (
         <ChatSidebar

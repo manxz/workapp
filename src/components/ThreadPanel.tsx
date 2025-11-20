@@ -1,10 +1,13 @@
 "use client";
 
 import { X, Scribble, Stack } from "@phosphor-icons/react";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import type { Message } from "@/hooks/useChat";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
+import { formatTime, formatDateDivider, shouldShowDateDivider } from "@/lib/dateUtils";
+import { linkifyText } from "@/lib/textUtils";
+import { QUICK_REACTIONS, COLORS } from "@/lib/constants";
 
 type ThreadPanelProps = {
   parentMessage: Message;
@@ -35,75 +38,28 @@ export default function ThreadPanel({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousReplyCountRef = useRef(0);
 
+  /**
+   * Scrolls thread messages to bottom
+   * Only triggers when new replies are added, not on updates (e.g., reactions)
+   */
+  const scrollToBottom = useCallback(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, []);
+
   // Only scroll to bottom when new replies are added, not when existing replies update (e.g., reactions)
   useEffect(() => {
     const currentCount = replies.length;
     const previousCount = previousReplyCountRef.current;
     
     // Only scroll if reply count increased (new reply added)
-    if (currentCount > previousCount && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    if (currentCount > previousCount) {
+      scrollToBottom();
     }
     
     previousReplyCountRef.current = currentCount;
-  }, [replies]);
-
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
-  const formatDateDivider = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return "Today";
-    }
-    if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday";
-    }
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const shouldShowDateDivider = (message: Message, prevMessage: Message | null) => {
-    if (!prevMessage) return true;
-    const currentDate = new Date(message.timestamp).toDateString();
-    const prevDate = new Date(prevMessage.timestamp).toDateString();
-    return currentDate !== prevDate;
-  };
-
-  const linkifyText = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
-
-    return parts.map((part, index) => {
-      if (part.match(urlRegex)) {
-        return (
-          <a
-            key={index}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#0070F3] hover:underline"
-          >
-            {part}
-          </a>
-        );
-      }
-      return part;
-    });
-  };
+  }, [replies, scrollToBottom]);
 
   const allMessages = [parentMessage, ...replies];
 
@@ -127,9 +83,13 @@ export default function ThreadPanel({
       {/* Messages */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto min-h-0">
         <div className="px-4 py-4 flex flex-col justify-end min-h-full">
-          {allMessages.map((message, index) => (
+          {allMessages.map((message, index) => {
+            const prevMessage = index > 0 ? allMessages[index - 1] : null;
+            const showDivider = shouldShowDateDivider(message.timestamp, prevMessage?.timestamp || null);
+            
+            return (
             <div key={message.id}>
-              {shouldShowDateDivider(message, index > 0 ? allMessages[index - 1] : null) && (
+              {showDivider && (
                 <div className="flex items-center justify-center gap-1.5 -mx-4 px-0 py-1.5">
                   <div className="flex-1 h-px bg-neutral-300" />
                   <p className="text-[11px] font-medium text-neutral-500 opacity-80 whitespace-nowrap px-1.5">
@@ -174,11 +134,31 @@ export default function ThreadPanel({
                             <button
                               key={emoji}
                               onClick={() => onReaction?.(message.id, emoji)}
-                              className={`flex items-center gap-1 h-5 px-2 rounded-[11px] font-medium text-[11px] transition-colors ${
+                              className="flex items-center gap-1 h-5 px-2 rounded-[11px] font-medium text-[11px] transition-colors"
+                              style={
                                 hasReacted
-                                  ? 'bg-[rgba(0,112,243,0.16)] border border-[#0070f3] text-[#0070f3]'
-                                  : 'bg-[#e9e9e9] hover:bg-[#d9d9d9] text-[#6a6a6a]'
-                              }`}
+                                  ? {
+                                      backgroundColor: COLORS.reactionActiveBackground,
+                                      borderWidth: '1px',
+                                      borderStyle: 'solid',
+                                      borderColor: COLORS.reactionActiveBorder,
+                                      color: COLORS.reactionActiveText,
+                                    }
+                                  : {
+                                      backgroundColor: COLORS.reactionInactiveBackground,
+                                      color: COLORS.reactionInactiveText,
+                                    }
+                              }
+                              onMouseEnter={(e) => {
+                                if (!hasReacted) {
+                                  e.currentTarget.style.backgroundColor = COLORS.reactionInactiveHover;
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!hasReacted) {
+                                  e.currentTarget.style.backgroundColor = COLORS.reactionInactiveBackground;
+                                }
+                              }}
                             >
                               <span className="text-[13px] leading-none">{emoji}</span>
                               <span>{count}</span>
@@ -192,44 +172,17 @@ export default function ThreadPanel({
                 
                 {/* Action Buttons - shown on hover (no reply button in threads) */}
                 <div className="absolute right-4 top-[-13px] hidden group-hover:flex flex-col items-end">
-                  <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-full px-[6px] py-[2px] flex gap-1 items-center">
+                  <div className="bg-white border rounded-full px-[6px] py-[2px] flex gap-1 items-center" style={{ borderColor: COLORS.actionBorder }}>
                     {/* Quick Reactions */}
-                    <button 
-                      onClick={() => onReaction?.(message.id, '👍')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">👍</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '❤️')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">❤️</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '💯')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">💯</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '😂')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">😂</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '😢')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">😢</span>
-                    </button>
-                    <button 
-                      onClick={() => onReaction?.(message.id, '😡')}
-                      className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
-                    >
-                      <span className="text-[14px] leading-none">😡</span>
-                    </button>
+                    {QUICK_REACTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => onReaction?.(message.id, emoji)}
+                        className="p-2 hover:bg-neutral-100 rounded transition-colors w-5 h-5 flex items-center justify-center"
+                      >
+                        <span className="text-[14px] leading-none">{emoji}</span>
+                      </button>
+                    ))}
                     
                     {/* More Actions */}
                     <button className="p-[2px] hover:bg-neutral-100 rounded transition-colors">
@@ -239,7 +192,8 @@ export default function ThreadPanel({
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
       </div>

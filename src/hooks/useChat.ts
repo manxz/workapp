@@ -4,7 +4,22 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import {
+  TYPING_INDICATOR_TIMEOUT,
+  OPTIMISTIC_MESSAGE_MATCH_WINDOW,
+  DEFAULT_AVATAR_URL,
+  USER_AVATAR_PLACEHOLDER,
+} from "@/lib/constants";
 
+/**
+ * Message type with support for text, images, reactions, and threads
+ * 
+ * Key Design Decisions:
+ * - `reactions`: Array format maintains insertion order (not object)
+ * - `imageUrls`: Multiple images supported (imageUrl is legacy)
+ * - `thread_id`: Marks this as a reply (if set, excluded from main chat)
+ * - `replyCount`, `lastReplyAt`, `replyAvatars`: Thread metadata for parent messages
+ */
 export type Message = {
   id: string;
   author: string;
@@ -20,11 +35,63 @@ export type Message = {
   replyAvatars?: string[]; // Avatars of users who replied
 };
 
+/**
+ * Thread information containing parent message and all replies
+ */
 export type ThreadInfo = {
   parentMessage: Message;
   replies: Message[];
 };
 
+/**
+ * Real-time chat hook with optimistic UI, threading, and reactions
+ * 
+ * @param conversationId - Unique conversation identifier
+ *   - Format: "channel-{id}" for channels
+ *   - Format: "{userId1}-{userId2}" for DMs (sorted alphabetically)
+ * 
+ * ## Key Features
+ * 
+ * ### Optimistic UI
+ * Messages appear instantly with local blob:// image URLs before server confirmation.
+ * Real images are preloaded in background, then seamlessly swapped to prevent flashing.
+ * 
+ * ### Typing Indicators
+ * Broadcasts when user types, auto-expires after 3 seconds of inactivity.
+ * Supports both main chat and thread-specific typing indicators.
+ * 
+ * ### Thread Support
+ * - Parent messages can have nested replies
+ * - Threads maintain separate message lists
+ * - Real-time updates for both main chat and active threads
+ * - Thread metadata (reply count, avatars) updates automatically
+ * 
+ * ### Reaction System
+ * - Array-based reactions maintain insertion order
+ * - Optimistic updates with server reconciliation
+ * - Automatic conversion from old object format for backward compatibility
+ * 
+ * ## Data Flow
+ * 
+ * 1. **Send Message**
+ *    - Create optimistic message with blob:// URLs
+ *    - Upload files to Supabase Storage (parallel)
+ *    - Insert message to database
+ *    - Real-time subscription receives INSERT
+ *    - Preload real images, then replace optimistic message
+ * 
+ * 2. **Real-time Updates**
+ *    - INSERT: New messages (with duplicate prevention)
+ *    - UPDATE: Reactions, thread metadata
+ *    - Typing events: Broadcast-only (not persisted)
+ * 
+ * 3. **Thread Management**
+ *    - Opening thread: Fetches parent + all replies
+ *    - New reply: Updates parent message metadata
+ *    - Real-time: Syncs both main chat and active thread
+ * 
+ * @returns Chat interface methods and state
+ */
 export function useChat(conversationId: string) {
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -45,7 +112,13 @@ export function useChat(conversationId: string) {
     }
   }, []);
 
-  // Load messages from Supabase
+  /**
+   * Loads messages from Supabase for the current conversation
+   * 
+   * Only loads top-level messages (thread replies are loaded separately).
+   * Handles backward compatibility for old reaction format (object → array).
+   * Automatically fetches thread metadata for messages with replies.
+   */
   const loadMessages = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -59,16 +132,18 @@ export function useChat(conversationId: string) {
 
       if (data) {
         const formattedMessages: Message[] = data.map((msg) => {
-          // Add to processed set to prevent duplicate processing
+          // Add to processed set to prevent duplicate processing from real-time events
           processedMessageIds.current.add(msg.id);
           
           // Convert old reaction format (object) to new format (array)
+          // WHY: Array format maintains insertion order, ensuring reactions appear
+          // in the order they were first added, not in the order users reacted
           let reactions: Array<{ emoji: string; userIds: string[] }> | undefined;
           if (msg.reactions) {
             if (Array.isArray(msg.reactions)) {
               reactions = msg.reactions;
             } else {
-              // Convert object format to array format
+              // Backward compatibility: convert object format to array format
               reactions = Object.entries(msg.reactions as Record<string, string[]>).map(([emoji, userIds]) => ({
                 emoji,
                 userIds
@@ -79,7 +154,7 @@ export function useChat(conversationId: string) {
           return {
             id: msg.id,
             author: msg.author_name,
-            avatar: msg.author_avatar || "https://i.pravatar.cc/150?img=1",
+            avatar: msg.author_avatar || DEFAULT_AVATAR_URL,
             timestamp: msg.created_at,
             text: msg.text,
             imageUrl: msg.image_url, // Legacy single image
@@ -89,7 +164,7 @@ export function useChat(conversationId: string) {
         });
         setMessages(formattedMessages);
         
-        // Load thread metadata for all messages
+        // Load thread metadata for all messages (reply counts, avatars, etc.)
         formattedMessages.forEach(msg => {
           updateThreadMetadata(msg.id);
         });
@@ -99,7 +174,8 @@ export function useChat(conversationId: string) {
     } finally {
       setLoading(false);
     }
-  }, [conversationId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]); // updateThreadMetadata is intentionally omitted to avoid recreating loadMessages
 
   // Send a message
   const sendMessage = useCallback(
@@ -122,7 +198,7 @@ export function useChat(conversationId: string) {
       const optimisticMessage: Message = {
         id: optimisticId,
         author: profile.full_name,
-        avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
+        avatar: profile.avatar_url || `${USER_AVATAR_PLACEHOLDER}${user.id}`,
         timestamp: new Date().toISOString(),
         text: text,
         imageUrls: localPreviewUrls.length > 0 ? localPreviewUrls : undefined,
@@ -173,7 +249,7 @@ export function useChat(conversationId: string) {
           conversation_id: conversationId,
           author_id: user.id,
           author_name: profile.full_name,
-          author_avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
+          author_avatar: profile.avatar_url || `${USER_AVATAR_PLACEHOLDER}${user.id}`,
           text: text,
           image_urls: imageUrls.length > 0 ? imageUrls : null,
         });
@@ -375,7 +451,22 @@ export function useChat(conversationId: string) {
               if (optimisticIndex !== -1) {
                 const oldMessage = prev[optimisticIndex];
                 
-                // Preload real images before replacing to prevent flash
+                /**
+                 * CRITICAL: Image Preloading Strategy
+                 * 
+                 * WHY: We preload real images before replacing the optimistic message
+                 * to prevent a visual "flash" where images disappear then reappear.
+                 * 
+                 * FLOW:
+                 * 1. User sends message → optimistic message shows instantly with blob:// URLs
+                 * 2. Files upload to Supabase Storage (in background)
+                 * 3. Real-time subscription receives message with real URLs
+                 * 4. We preload ALL real images into browser cache
+                 * 5. Once ALL images are cached, we swap optimistic → real message
+                 * 6. Clean up blob:// URLs to free memory
+                 * 
+                 * RESULT: Seamless transition, no flash, perfect UX
+                 */
                 if (formattedMessage.imageUrls && formattedMessage.imageUrls.length > 0) {
                   // Preload all images first
                   const imagePromises = formattedMessage.imageUrls.map(url => {
@@ -721,7 +812,7 @@ export function useChat(conversationId: string) {
           return {
             id: msg.id,
             author: msg.author_name,
-            avatar: msg.author_avatar || "https://i.pravatar.cc/150?img=1",
+            avatar: msg.author_avatar || DEFAULT_AVATAR_URL,
             timestamp: msg.created_at,
             text: msg.text,
             imageUrl: msg.image_url,
@@ -754,7 +845,7 @@ export function useChat(conversationId: string) {
         conversation_id: conversationId,
         author_id: user.id,
         author_name: profile.full_name,
-        author_avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
+        author_avatar: profile.avatar_url || `${USER_AVATAR_PLACEHOLDER}${user.id}`,
         text: text,
         thread_id: parentMessageId,
       });
