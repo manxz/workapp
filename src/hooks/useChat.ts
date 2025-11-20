@@ -121,17 +121,48 @@ export function useChat(conversationId: string) {
    */
   const loadMessages = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("conversation_id", conversationId)
-        .is("thread_id", null) // Only load top-level messages, not thread replies
-        .order("created_at", { ascending: true });
+      // Fetch messages and thread metadata in parallel
+      const [messagesResult, threadsResult] = await Promise.all([
+        supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", conversationId)
+          .is("thread_id", null) // Only load top-level messages, not thread replies
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("messages")
+          .select("thread_id, author_avatar, created_at")
+          .eq("conversation_id", conversationId)
+          .not("thread_id", "is", null) // Only get thread replies
+          .order("created_at", { ascending: false })
+      ]);
 
-      if (error) throw error;
+      if (messagesResult.error) throw messagesResult.error;
 
-      if (data) {
-        const formattedMessages: Message[] = data.map((msg) => {
+      if (messagesResult.data) {
+        // Build thread metadata map for instant lookup
+        const threadMetadata = new Map<string, { replyCount: number; lastReplyAt: string; replyAvatars: string[] }>();
+        
+        if (threadsResult.data) {
+          // Group by thread_id
+          const threadGroups = threadsResult.data.reduce((acc, reply) => {
+            const threadId = reply.thread_id as string;
+            if (!acc[threadId]) acc[threadId] = [];
+            acc[threadId].push(reply);
+            return acc;
+          }, {} as Record<string, typeof threadsResult.data>);
+          
+          // Calculate metadata for each thread
+          Object.entries(threadGroups).forEach(([threadId, replies]) => {
+            threadMetadata.set(threadId, {
+              replyCount: replies.length,
+              lastReplyAt: replies[0].created_at, // Already sorted desc
+              replyAvatars: [...new Set(replies.map(r => r.author_avatar))].filter(Boolean) as string[]
+            });
+          });
+        }
+        
+        const formattedMessages: Message[] = messagesResult.data.map((msg) => {
           // Add to processed set to prevent duplicate processing from real-time events
           processedMessageIds.current.add(msg.id);
           
@@ -151,6 +182,9 @@ export function useChat(conversationId: string) {
             }
           }
           
+          // Get thread metadata if this message has replies
+          const metadata = threadMetadata.get(msg.id);
+          
           return {
             id: msg.id,
             author: msg.author_name,
@@ -160,14 +194,16 @@ export function useChat(conversationId: string) {
             imageUrl: msg.image_url, // Legacy single image
             imageUrls: msg.image_urls || undefined, // Multiple images
             reactions,
+            // Include thread metadata immediately if available
+            ...(metadata && {
+              threadId: msg.id,
+              replyCount: metadata.replyCount,
+              lastReplyAt: metadata.lastReplyAt,
+              replyAvatars: metadata.replyAvatars
+            })
           };
         });
         setMessages(formattedMessages);
-        
-        // Load thread metadata for all messages (reply counts, avatars, etc.)
-        formattedMessages.forEach(msg => {
-          updateThreadMetadata(msg.id);
-        });
       }
     } catch (error) {
       console.error("Error loading messages:", error);
@@ -175,7 +211,7 @@ export function useChat(conversationId: string) {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId]); // updateThreadMetadata is intentionally omitted to avoid recreating loadMessages
+  }, [conversationId]);
 
   // Send a message
   const sendMessage = useCallback(
