@@ -13,7 +13,7 @@ export type Message = {
   text: string;
   imageUrl?: string; // Legacy single image
   imageUrls?: string[]; // Multiple images
-  reactions?: Record<string, string[]>; // { emoji: [userId1, userId2, ...] }
+  reactions?: Array<{ emoji: string; userIds: string[] }>; // Ordered array to maintain insertion order
 };
 
 export function useChat(conversationId: string) {
@@ -50,6 +50,20 @@ export function useChat(conversationId: string) {
           // Add to processed set to prevent duplicate processing
           processedMessageIds.current.add(msg.id);
           
+          // Convert old reaction format (object) to new format (array)
+          let reactions: Array<{ emoji: string; userIds: string[] }> | undefined;
+          if (msg.reactions) {
+            if (Array.isArray(msg.reactions)) {
+              reactions = msg.reactions;
+            } else {
+              // Convert object format to array format
+              reactions = Object.entries(msg.reactions as Record<string, string[]>).map(([emoji, userIds]) => ({
+                emoji,
+                userIds
+              }));
+            }
+          }
+          
           return {
             id: msg.id,
             author: msg.author_name,
@@ -58,7 +72,7 @@ export function useChat(conversationId: string) {
             text: msg.text,
             imageUrl: msg.image_url, // Legacy single image
             imageUrls: msg.image_urls || undefined, // Multiple images
-            reactions: msg.reactions || undefined,
+            reactions,
           };
         });
         setMessages(formattedMessages);
@@ -245,6 +259,20 @@ export function useChat(conversationId: string) {
             }
             processedMessageIds.current.add(newMsg.id as string);
             
+            // Convert old reaction format (object) to new format (array)
+            let reactions: Array<{ emoji: string; userIds: string[] }> | undefined;
+            if (newMsg.reactions) {
+              if (Array.isArray(newMsg.reactions)) {
+                reactions = newMsg.reactions as Array<{ emoji: string; userIds: string[] }>;
+              } else {
+                // Convert object format to array format
+                reactions = Object.entries(newMsg.reactions as Record<string, string[]>).map(([emoji, userIds]) => ({
+                  emoji,
+                  userIds
+                }));
+              }
+            }
+            
             const formattedMessage: Message = {
               id: newMsg.id as string,
               author: newMsg.author_name as string,
@@ -253,7 +281,7 @@ export function useChat(conversationId: string) {
               text: newMsg.text as string,
               imageUrl: newMsg.image_url as string | undefined, // Legacy single image
               imageUrls: (newMsg.image_urls as string[]) || undefined, // Multiple images
-              reactions: (newMsg.reactions as Record<string, string[]>) || undefined,
+              reactions,
             };
           
           // Show browser notification if message is from someone else
@@ -383,13 +411,27 @@ export function useChat(conversationId: string) {
         (payload) => {
           const updatedMsg = payload.new as Record<string, unknown>;
           
+          // Convert old reaction format (object) to new format (array)
+          let reactions: Array<{ emoji: string; userIds: string[] }> | undefined;
+          if (updatedMsg.reactions) {
+            if (Array.isArray(updatedMsg.reactions)) {
+              reactions = updatedMsg.reactions as Array<{ emoji: string; userIds: string[] }>;
+            } else {
+              // Convert object format to array format
+              reactions = Object.entries(updatedMsg.reactions as Record<string, string[]>).map(([emoji, userIds]) => ({
+                emoji,
+                userIds
+              }));
+            }
+          }
+          
           // Update the message with new data (e.g., reactions)
           setMessages((prev) =>
             prev.map((m) =>
               m.id === updatedMsg.id
                 ? {
                     ...m,
-                    reactions: (updatedMsg.reactions as Record<string, string[]>) || undefined,
+                    reactions,
                   }
                 : m
             )
@@ -437,25 +479,52 @@ export function useChat(conversationId: string) {
     const message = messages.find(m => m.id === messageId);
     if (!message) return;
 
-    // Calculate new reactions
-    const currentReactions = message.reactions || {};
-    const userIds = currentReactions[emoji] || [];
-    const hasReacted = userIds.includes(user.id);
-
-    let newReactions: Record<string, string[]>;
-    if (hasReacted) {
-      // Remove reaction
-      const filteredUserIds = userIds.filter(id => id !== user.id);
-      if (filteredUserIds.length === 0) {
-        // Remove emoji entirely if no users left
-        const { [emoji]: _, ...rest } = currentReactions;
-        newReactions = rest;
+    // Calculate new reactions (array-based to maintain order)
+    // Ensure we have array format (convert from object if needed)
+    let currentReactions: Array<{ emoji: string; userIds: string[] }> = [];
+    if (message.reactions) {
+      if (Array.isArray(message.reactions)) {
+        currentReactions = message.reactions;
       } else {
-        newReactions = { ...currentReactions, [emoji]: filteredUserIds };
+        // Convert object format to array format
+        currentReactions = Object.entries(message.reactions as unknown as Record<string, string[]>).map(([emoji, userIds]) => ({
+          emoji,
+          userIds
+        }));
+      }
+    }
+    
+    const existingReactionIndex = currentReactions.findIndex(r => r.emoji === emoji);
+    
+    let newReactions: Array<{ emoji: string; userIds: string[] }>;
+    
+    if (existingReactionIndex !== -1) {
+      // Emoji already exists
+      const existingReaction = currentReactions[existingReactionIndex];
+      const hasReacted = existingReaction.userIds.includes(user.id);
+      
+      if (hasReacted) {
+        // Remove user's reaction
+        const filteredUserIds = existingReaction.userIds.filter(id => id !== user.id);
+        if (filteredUserIds.length === 0) {
+          // Remove emoji entirely if no users left
+          newReactions = currentReactions.filter((_, index) => index !== existingReactionIndex);
+        } else {
+          // Update the userIds array
+          newReactions = [...currentReactions];
+          newReactions[existingReactionIndex] = { emoji, userIds: filteredUserIds };
+        }
+      } else {
+        // Add user's reaction
+        newReactions = [...currentReactions];
+        newReactions[existingReactionIndex] = {
+          emoji,
+          userIds: [...existingReaction.userIds, user.id]
+        };
       }
     } else {
-      // Add reaction
-      newReactions = { ...currentReactions, [emoji]: [...userIds, user.id] };
+      // New emoji, add to end
+      newReactions = [...currentReactions, { emoji, userIds: [user.id] }];
     }
 
     // Optimistically update UI

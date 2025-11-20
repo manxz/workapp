@@ -11,7 +11,7 @@ export type Message = {
   text: string;
   imageUrl?: string; // Legacy single image
   imageUrls?: string[]; // Multiple images
-  reactions?: Record<string, string[]>; // { emoji: [userId1, userId2, ...] }
+  reactions?: Array<{ emoji: string; userIds: string[] }>; // Ordered array to maintain insertion order
 };
 
 type ChatMessagesProps = {
@@ -141,62 +141,61 @@ function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps
                 
                 {/* Message Content */}
                 <div className="flex flex-col min-w-0 flex-1">
-                {/* Message Header */}
-                <div className="flex items-center gap-1">
-                  <span className="text-[13px] font-semibold text-black">
-                    {message.author}
-                  </span>
-                  <span className="text-[11px] font-medium text-neutral-500 opacity-80">
-                    {formatTime(message.timestamp)}
-                  </span>
-                </div>
-                
-                    {/* Message Text */}
-                    {message.text && (
-                      <p className="text-[13px] font-medium text-black opacity-90 leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                        {linkifyText(message.text)}
-                      </p>
-                    )}
-                    
-                    {/* Message Images */}
-                    {(message.imageUrls || message.imageUrl) && (
-                      <div className="mt-2 flex flex-col gap-2">
-                        {/* Multiple images */}
-                        {message.imageUrls && message.imageUrls.map((url, index) => (
-                          <div 
-                            key={index}
-                            className="cursor-pointer"
-                            onClick={() => setLightboxImage(url)}
-                          >
-                            <img
-                              src={url}
-                              alt={`Uploaded image ${index + 1}`}
-                              className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
-                            />
-                          </div>
-                        ))}
-                        
-                        {/* Legacy single image */}
-                        {!message.imageUrls && message.imageUrl && (
-                          <div 
-                            className="cursor-pointer"
-                            onClick={() => setLightboxImage(message.imageUrl || null)}
-                          >
-                            <img
-                              src={message.imageUrl}
-                              alt="Uploaded image"
-                              className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                  {/* Message Header */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[13px] font-semibold text-black">
+                      {message.author}
+                    </span>
+                    <span className="text-[11px] font-medium text-neutral-500 opacity-80">
+                      {formatTime(message.timestamp)}
+                    </span>
                   </div>
                   
-                  {/* Reactions */}
-                  {message.reactions && Object.keys(message.reactions).length > 0 && (
+                  {/* Message Text */}
+                  {message.text && (
+                    <p className="text-[13px] font-medium text-black opacity-90 leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                      {linkifyText(message.text)}
+                    </p>
+                  )}
+                  
+                  {/* Message Images */}
+                  {(message.imageUrls || message.imageUrl) && (
+                    <div className="mt-2 flex flex-col gap-2">
+                      {/* Multiple images */}
+                      {message.imageUrls && message.imageUrls.map((url, index) => (
+                        <div 
+                          key={index}
+                          className="cursor-pointer"
+                          onClick={() => setLightboxImage(url)}
+                        >
+                          <img
+                            src={url}
+                            alt={`Uploaded image ${index + 1}`}
+                            className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
+                          />
+                        </div>
+                      ))}
+                      
+                      {/* Legacy single image */}
+                      {!message.imageUrls && message.imageUrl && (
+                        <div 
+                          className="cursor-pointer"
+                          onClick={() => setLightboxImage(message.imageUrl || null)}
+                        >
+                          <img
+                            src={message.imageUrl}
+                            alt="Uploaded image"
+                            className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Reactions - below message content */}
+                  {message.reactions && message.reactions.length > 0 && (
                     <div className="flex gap-1 mt-1.5 flex-wrap">
-                      {Object.entries(message.reactions).map(([emoji, userIds]) => {
+                      {message.reactions.map(({ emoji, userIds }) => {
                         const hasReacted = currentUserId && userIds.includes(currentUserId);
                         const count = userIds.length;
                         
@@ -218,9 +217,10 @@ function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps
                     </div>
                   )}
                 </div>
-                
-                {/* Action Buttons - shown on hover */}
-                <div className="absolute right-4 top-[-13px] hidden group-hover:flex flex-col items-end">
+              </div>
+              
+              {/* Action Buttons - shown on hover */}
+              <div className="absolute right-4 top-[-13px] hidden group-hover:flex flex-col items-end">
                   <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-full px-[6px] py-[2px] flex gap-1 items-center">
                     {/* Quick Reactions */}
                     <button 
@@ -272,7 +272,7 @@ function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps
                   </div>
                 </div>
               </div>
-          </div>
+            </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
