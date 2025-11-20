@@ -92,12 +92,15 @@ export function useUnreadMessages() {
       conversationLatestMessage.forEach((latest, conversationId) => {
         const lastRead = readMap.get(conversationId);
         
-        // Mark as unread if:
-        // 1. User has never read this conversation, OR
+        // Mark as unread ONLY if:
+        // 1. We have a last_read_at timestamp (user has opened this conversation before), AND
         // 2. Latest message is newer than last_read_at, AND
         // 3. Latest message is not from the current user
-        if (latest.authorId !== user.id) {
-          if (!lastRead || new Date(latest.timestamp) > new Date(lastRead)) {
+        //
+        // NOTE: If lastRead is undefined (never tracked), we DON'T mark as unread
+        // This prevents all existing conversations from showing as unread on migration
+        if (lastRead && latest.authorId !== user.id) {
+          if (new Date(latest.timestamp) > new Date(lastRead)) {
             unread.add(conversationId);
           }
         }
