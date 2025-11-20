@@ -205,6 +205,13 @@ function HomeContent() {
     prevConversationId.current = conversationId;
   }, [conversationId, threadIdFromUrl, searchParams, router, closeThread]);
 
+  // Close thread when switching away from chat view
+  useEffect(() => {
+    if (activeView !== "chat" && activeThread) {
+      handleCloseThread();
+    }
+  }, [activeView, activeThread]);
+
   // Reset pending files after they're passed to ChatInput
   useEffect(() => {
     if (pendingFiles.length > 0) {
@@ -355,7 +362,7 @@ function HomeContent() {
         />
       )}
       <main 
-        className={`flex flex-col h-screen flex-1 relative overflow-hidden transition-all duration-200 ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"} ${activeThread ? "mr-[512px]" : ""}`}
+        className={`flex flex-col h-screen flex-1 relative overflow-hidden transition-all duration-200 ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"} ${activeView === "chat" && activeThread ? "mr-[512px]" : ""}`}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
