@@ -67,14 +67,13 @@ function HomeContent() {
 
   // Redirect if current app is disabled
   useEffect(() => {
+    // Only redirect once loading is complete
     if (appsLoading) return;
 
-    // If viewing a disabled app, redirect to chat or apps
+    // If viewing a disabled app, redirect to chat
+    // (Chat is always enabled, so no need to check it)
     if (activeView === "projects" && !isAppEnabled("projects")) {
       setActiveView("chat");
-    } else if (activeView === "chat" && !isAppEnabled("chat")) {
-      // Chat should never be disabled, but just in case
-      setActiveView("apps");
     }
   }, [activeView, isAppEnabled, appsLoading]);
 
