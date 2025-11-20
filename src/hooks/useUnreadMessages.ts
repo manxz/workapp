@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -121,22 +121,36 @@ export function useUnreadMessages() {
   const markAsRead = useCallback(async (conversationId: string) => {
     if (!user) return;
 
+    // OPTIMISTIC UPDATE: Remove from unread immediately (no waiting)
+    setUnreadConversations((prev) => {
+      const next = new Set(prev);
+      next.delete(conversationId);
+      return next;
+    });
+
+    // Then sync with database in background
     try {
-      // Call the database function to mark as read
       const { error } = await supabase.rpc('mark_conversation_read', {
         p_conversation_id: conversationId
       });
 
-      if (error) throw error;
-
-      // Optimistically update local state
-      setUnreadConversations((prev) => {
-        const next = new Set(prev);
-        next.delete(conversationId);
-        return next;
-      });
+      if (error) {
+        console.error('Error marking conversation as read:', error);
+        // Re-add to unread on error
+        setUnreadConversations((prev) => {
+          const next = new Set(prev);
+          next.add(conversationId);
+          return next;
+        });
+      }
     } catch (error) {
       console.error('Error marking conversation as read:', error);
+      // Re-add to unread on error
+      setUnreadConversations((prev) => {
+        const next = new Set(prev);
+        next.add(conversationId);
+        return next;
+      });
     }
   }, [user]);
 
@@ -208,8 +222,12 @@ export function useUnreadMessages() {
     };
   }, [user]);
 
+  // Compute unread count reactively
+  const unreadCount = useMemo(() => unreadConversations.size, [unreadConversations]);
+
   return {
     unreadConversations,
+    unreadCount,
     markAsRead,
     hasUnread: (conversationId: string) => unreadConversations.has(conversationId),
   };

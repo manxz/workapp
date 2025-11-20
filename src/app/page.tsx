@@ -23,10 +23,7 @@ const ProjectsApp = dynamic(() => import("@/apps/projects/ProjectsApp"), {
 
 function HomeContent() {
   const { user, profile, loading } = useAuth();
-  const { unreadConversations } = useUnreadMessages();
-  
-  // Calculate total unread count for browser tab title
-  const unreadCount = unreadConversations.size;
+  const { unreadCount } = useUnreadMessages();
   
   // Update browser tab title with unread count
   useEffect(() => {
