@@ -128,7 +128,7 @@ export default function ThreadPanel({
                       <span className="text-[13px] font-semibold text-black">
                         {message.author}
                       </span>
-                      <span className="text-[11px] font-medium text-neutral-500 opacity-80">
+                      <span className="text-[11px] font-medium text-neutral-500 opacity-80 leading-none translate-y-px">
                         {formatTime(message.timestamp)}
                       </span>
                     </div>
