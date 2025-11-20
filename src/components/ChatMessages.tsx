@@ -153,7 +153,7 @@ function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps
                   
                   {/* Message Text */}
                   {message.text && (
-                    <p className="text-[13px] font-medium text-black opacity-90 leading-relaxed whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                    <p className="text-[13px] font-medium text-black opacity-90 leading-normal whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                       {linkifyText(message.text)}
                     </p>
                   )}
