@@ -13,11 +13,11 @@ DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 -- Recreate with optimized auth checks
 CREATE POLICY "Users can insert own profile" ON profiles
   FOR INSERT 
-  WITH CHECK ((select auth.uid()) = user_id);
+  WITH CHECK ((select auth.uid()) = id);
 
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE 
-  USING ((select auth.uid()) = user_id);
+  USING ((select auth.uid()) = id);
 
 -- ============================================================================
 -- MESSAGES TABLE
@@ -46,7 +46,7 @@ CREATE POLICY "Users can update message reactions" ON messages
 
 CREATE POLICY "Users can delete own messages" ON messages
   FOR DELETE 
-  USING ((select auth.uid())::text = author_id);
+  USING ((select auth.uid()) = author_id);
 
 -- ============================================================================
 -- CHANNELS TABLE
@@ -63,7 +63,7 @@ CREATE POLICY "Authenticated users can create channels" ON channels
 
 CREATE POLICY "Channel creators can update their channels" ON channels
   FOR UPDATE 
-  USING ((select auth.uid())::text = created_by);
+  USING ((select auth.uid()) = created_by);
 
 -- ============================================================================
 -- MESSAGE_REACTIONS TABLE (if it exists)
@@ -80,7 +80,7 @@ CREATE POLICY "Authenticated users can add reactions" ON message_reactions
 
 CREATE POLICY "Users can delete own reactions" ON message_reactions
   FOR DELETE 
-  USING ((select auth.uid())::text = user_id);
+  USING ((select auth.uid()) = user_id);
 
 -- ============================================================================
 -- TASKS TABLE
@@ -110,9 +110,9 @@ CREATE POLICY "Users can create projects" ON projects
 
 CREATE POLICY "Users can update own projects" ON projects
   FOR UPDATE 
-  USING ((select auth.uid())::text = created_by);
+  USING ((select auth.uid()) = created_by);
 
 CREATE POLICY "Users can delete own projects" ON projects
   FOR DELETE 
-  USING ((select auth.uid())::text = created_by);
+  USING ((select auth.uid()) = created_by);
 
