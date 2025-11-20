@@ -51,6 +51,7 @@ function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const previousMessageCountRef = useRef(0);
 
   const scrollToBottom = () => {
     if (scrollContainerRef.current) {
@@ -58,8 +59,17 @@ function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps
     }
   };
 
+  // Only scroll to bottom when new messages are added, not when existing messages update (e.g., reactions)
   useEffect(() => {
-    scrollToBottom();
+    const currentCount = messages.length;
+    const previousCount = previousMessageCountRef.current;
+    
+    // Only scroll if message count increased (new message added)
+    if (currentCount > previousCount) {
+      scrollToBottom();
+    }
+    
+    previousMessageCountRef.current = currentCount;
   }, [messages]);
 
   // Keep scroll at bottom when container resizes (input grows)
