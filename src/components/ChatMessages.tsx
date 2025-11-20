@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, memo, useState } from "react";
 import { X, ArrowBendUpLeft, Stack } from "@phosphor-icons/react";
+import ThreadSummary from "./ThreadSummary";
 
 export type Message = {
   id: string;
@@ -12,12 +13,17 @@ export type Message = {
   imageUrl?: string; // Legacy single image
   imageUrls?: string[]; // Multiple images
   reactions?: Array<{ emoji: string; userIds: string[] }>; // Ordered array to maintain insertion order
+  threadId?: string; // If this is a reply in a thread, the parent message ID
+  replyCount?: number; // Number of replies in the thread
+  lastReplyAt?: string; // Timestamp of last reply
+  replyAvatars?: string[]; // Avatars of users who replied
 };
 
 type ChatMessagesProps = {
   messages: Message[];
   currentUserId?: string;
   onReaction?: (messageId: string, emoji: string) => void;
+  onOpenThread?: (messageId: string) => void;
 };
 
 // Helper function to detect and linkify URLs
@@ -47,7 +53,7 @@ function linkifyText(text: string) {
   });
 }
 
-function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps) {
+function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
@@ -226,6 +232,16 @@ function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps
                       })}
                     </div>
                   )}
+                  
+                  {/* Thread summary - if message has replies */}
+                  {message.replyCount && message.replyCount > 0 && message.lastReplyAt && message.replyAvatars && (
+                    <ThreadSummary
+                      replyCount={message.replyCount}
+                      lastReplyAt={message.lastReplyAt}
+                      replyAvatars={message.replyAvatars}
+                      onViewThread={() => onOpenThread?.(message.id)}
+                    />
+                  )}
                 </div>
               </div>
               
@@ -271,7 +287,10 @@ function ChatMessages({ messages, currentUserId, onReaction }: ChatMessagesProps
                     </button>
                     
                     {/* Reply */}
-                    <button className="p-[2px] hover:bg-neutral-100 rounded transition-colors">
+                    <button 
+                      onClick={() => onOpenThread?.(message.id)}
+                      className="p-[2px] hover:bg-neutral-100 rounded transition-colors"
+                    >
                       <ArrowBendUpLeft size={16} weight="regular" className="text-[#6a6a6a]" />
                     </button>
                     

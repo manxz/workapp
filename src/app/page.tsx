@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Mountains } from "@phosphor-icons/react";
 import Sidebar from "@/components/Sidebar";
 import ChatSidebar from "@/components/ChatSidebar";
 import ChatInput from "@/components/ChatInput";
 import ChatHeader from "@/components/ChatHeader";
 import ChatMessages from "@/components/ChatMessages";
+import ThreadPanel from "@/components/ThreadPanel";
 import TypingIndicator from "@/components/TypingIndicator";
 import Login from "@/components/Login";
 import ProfileSetup from "@/components/ProfileSetup";
@@ -28,6 +30,8 @@ export default function Home() {
   const { projects, loading: projectsLoading, createProject, deleteProject } = useProjects();
   const { tasks: allTasks } = useTasks(); // Load all tasks to calculate counts
   const { hasUnread, markAsRead, unreadConversations } = useUnreadMessages();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   
   // Calculate total unread count
   const unreadCount = unreadConversations.size;
@@ -158,7 +162,49 @@ export default function Home() {
         : ""
     : "";
   
-  const { messages, sendMessage, typingUsers, broadcastTyping, broadcastStopTyping, toggleReaction } = useChat(conversationId);
+  const { messages, sendMessage, typingUsers, broadcastTyping, broadcastStopTyping, toggleReaction, activeThread, loadThread, sendThreadReply, closeThread } = useChat(conversationId);
+
+  // Wrap loadThread to update URL
+  const handleOpenThread = (messageId: string) => {
+    loadThread(messageId);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('thread', messageId);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
+  // Wrap closeThread to update URL
+  const handleCloseThread = () => {
+    closeThread();
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('thread');
+    router.replace(`?${params.toString()}`, { scroll: false });
+  };
+
+  // Load thread from URL on mount or when conversation changes
+  const threadIdFromUrl = searchParams.get('thread');
+  useEffect(() => {
+    if (threadIdFromUrl && conversationId && !activeThread) {
+      // Small delay to ensure messages are loaded
+      const timer = setTimeout(() => {
+        loadThread(threadIdFromUrl);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadIdFromUrl, conversationId]);
+  
+  // Clear thread param when conversation changes (but keep it if just refreshing same conversation)
+  const prevConversationId = useRef(conversationId);
+  useEffect(() => {
+    if (prevConversationId.current && prevConversationId.current !== conversationId && threadIdFromUrl) {
+      // Conversation changed and there's a thread param in URL - clear it
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete('thread');
+      router.replace(`?${params.toString()}`, { scroll: false });
+      closeThread();
+    }
+    prevConversationId.current = conversationId;
+  }, [conversationId, threadIdFromUrl, searchParams, router, closeThread]);
 
   // Reset pending files after they're passed to ChatInput
   useEffect(() => {
@@ -310,7 +356,7 @@ export default function Home() {
         />
       )}
       <main 
-        className={`flex flex-col h-screen flex-1 relative overflow-hidden ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"}`}
+        className={`flex flex-col h-screen flex-1 relative overflow-hidden transition-all duration-200 ${activeView === "chat" ? "ml-[264px]" : activeView === "projects" ? "ml-[264px]" : "ml-16"} ${activeThread ? "mr-[512px]" : ""}`}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -340,10 +386,11 @@ export default function Home() {
               />
               
               {/* Messages - scrollable, takes remaining space */}
-              <ChatMessages 
-                messages={messages} 
+              <ChatMessages
+                messages={messages}
                 currentUserId={user?.id}
                 onReaction={toggleReaction}
+                onOpenThread={handleOpenThread}
               />
               
               {/* Input area - grows with content */}
@@ -355,10 +402,25 @@ export default function Home() {
                 externalFiles={pendingFiles}
               />
               
-              {/* Typing indicator */}
+              {/* Typing indicator - show main chat typing + all thread typing */}
               <TypingIndicator typingUsers={typingUsers} />
               
               <NotificationPrompt />
+              
+              {/* Thread Panel */}
+              {activeThread && (
+                <ThreadPanel
+                  parentMessage={activeThread.parentMessage}
+                  replies={activeThread.replies}
+                  onClose={handleCloseThread}
+                  onSendReply={(text) => sendThreadReply(activeThread.parentMessage.id, text)}
+                  currentUserId={user?.id}
+                  onReaction={toggleReaction}
+                  typingUsers={typingUsers}
+                  onTyping={broadcastTyping}
+                  onStopTyping={broadcastStopTyping}
+                />
+              )}
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">

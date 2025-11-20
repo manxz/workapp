@@ -14,13 +14,24 @@ export type Message = {
   imageUrl?: string; // Legacy single image
   imageUrls?: string[]; // Multiple images
   reactions?: Array<{ emoji: string; userIds: string[] }>; // Ordered array to maintain insertion order
+  threadId?: string; // If this is a reply in a thread, the parent message ID
+  replyCount?: number; // Number of replies in the thread
+  lastReplyAt?: string; // Timestamp of last reply
+  replyAvatars?: string[]; // Avatars of users who replied
+};
+
+export type ThreadInfo = {
+  parentMessage: Message;
+  replies: Message[];
 };
 
 export function useChat(conversationId: string) {
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
-  const [typingUsers, setTypingUsers] = useState<{ userId: string; userName: string }[]>([]);
+  const [typingUsers, setTypingUsers] = useState<{ userId: string; userName: string; threadId?: string }[]>([]);
+  const [activeThread, setActiveThread] = useState<ThreadInfo | null>(null);
+  const [threadReplies, setThreadReplies] = useState<Message[]>([]);
   const typingTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const optimisticMessageRef = useRef<string | null>(null);
   const processedMessageIds = useRef<Set<string>>(new Set());
@@ -41,6 +52,7 @@ export function useChat(conversationId: string) {
         .from("messages")
         .select("*")
         .eq("conversation_id", conversationId)
+        .is("thread_id", null) // Only load top-level messages, not thread replies
         .order("created_at", { ascending: true });
 
       if (error) throw error;
@@ -76,6 +88,11 @@ export function useChat(conversationId: string) {
           };
         });
         setMessages(formattedMessages);
+        
+        // Load thread metadata for all messages
+        formattedMessages.forEach(msg => {
+          updateThreadMetadata(msg.id);
+        });
       }
     } catch (error) {
       console.error("Error loading messages:", error);
@@ -207,40 +224,44 @@ export function useChat(conversationId: string) {
     
     channel
       .on('broadcast', { event: 'typing' }, (payload) => {
-        const { userId, userName } = payload.payload;
+        const { userId, userName, threadId } = payload.payload;
         if (userId !== user?.id) {
-          // Clear existing timeout for this user
-          const existingTimeout = typingTimeoutsRef.current.get(userId);
+          const key = threadId ? `${userId}-${threadId}` : userId;
+          
+          // Clear existing timeout for this user/thread combo
+          const existingTimeout = typingTimeoutsRef.current.get(key);
           if (existingTimeout) {
             clearTimeout(existingTimeout);
           }
 
           // Add or update user in typing list
           setTypingUsers((prev) => {
-            if (prev.some(u => u.userId === userId)) return prev;
-            return [...prev, { userId, userName }];
+            const existing = prev.find(u => u.userId === userId && u.threadId === threadId);
+            if (existing) return prev;
+            return [...prev, { userId, userName, threadId }];
           });
 
           // Set new timeout to remove after 3 seconds
           const timeout = setTimeout(() => {
-            setTypingUsers((prev) => prev.filter(u => u.userId !== userId));
-            typingTimeoutsRef.current.delete(userId);
+            setTypingUsers((prev) => prev.filter(u => !(u.userId === userId && u.threadId === threadId)));
+            typingTimeoutsRef.current.delete(key);
           }, 3000);
           
-          typingTimeoutsRef.current.set(userId, timeout);
+          typingTimeoutsRef.current.set(key, timeout);
         }
       })
       .on('broadcast', { event: 'stop-typing' }, (payload) => {
-        const { userId } = payload.payload;
+        const { userId, threadId } = payload.payload;
+        const key = threadId ? `${userId}-${threadId}` : userId;
         
-        // Clear timeout for this user
-        const existingTimeout = typingTimeoutsRef.current.get(userId);
+        // Clear timeout for this user/thread combo
+        const existingTimeout = typingTimeoutsRef.current.get(key);
         if (existingTimeout) {
           clearTimeout(existingTimeout);
-          typingTimeoutsRef.current.delete(userId);
+          typingTimeoutsRef.current.delete(key);
         }
         
-        setTypingUsers((prev) => prev.filter(u => u.userId !== userId));
+        setTypingUsers((prev) => prev.filter(u => !(u.userId === userId && u.threadId === threadId)));
       })
       .on(
         "postgres_changes",
@@ -258,6 +279,20 @@ export function useChat(conversationId: string) {
               return;
             }
             processedMessageIds.current.add(newMsg.id as string);
+            
+            // Handle thread messages separately
+            if (newMsg.thread_id) {
+              // This is a thread reply - update parent message metadata
+              updateThreadMetadata(newMsg.thread_id as string);
+              
+              // If this thread is currently open, reload it
+              if (activeThread && activeThread.parentMessage.id === newMsg.thread_id) {
+                loadThread(newMsg.thread_id as string);
+              }
+              
+              // Don't add thread replies to main message list
+              return;
+            }
             
             // Convert old reaction format (object) to new format (array)
             let reactions: Array<{ emoji: string; userIds: string[] }> | undefined;
@@ -436,6 +471,28 @@ export function useChat(conversationId: string) {
                 : m
             )
           );
+          
+          // Also update in active thread if it's open
+          setActiveThread((prev) => {
+            if (!prev) return prev;
+            
+            // Check if this message is the parent or a reply
+            if (prev.parentMessage.id === updatedMsg.id) {
+              return {
+                ...prev,
+                parentMessage: { ...prev.parentMessage, reactions },
+              };
+            }
+            
+            const replyIndex = prev.replies.findIndex(r => r.id === updatedMsg.id);
+            if (replyIndex !== -1) {
+              const newReplies = [...prev.replies];
+              newReplies[replyIndex] = { ...newReplies[replyIndex], reactions };
+              return { ...prev, replies: newReplies };
+            }
+            
+            return prev;
+          });
         }
       )
       .subscribe();
@@ -450,24 +507,24 @@ export function useChat(conversationId: string) {
   }, [conversationId, loadMessages, user]);
 
   // Broadcast typing event - uses channelRef to avoid creating new channels
-  const broadcastTyping = useCallback(() => {
+  const broadcastTyping = useCallback((threadId?: string) => {
     if (!user || !profile || !profile.full_name || !channelRef.current) return;
     
     channelRef.current.send({
       type: 'broadcast',
       event: 'typing',
-      payload: { userId: user.id, userName: profile.full_name },
+      payload: { userId: user.id, userName: profile.full_name, threadId },
     });
   }, [user, profile]);
 
   // Broadcast stop typing event - uses channelRef to avoid creating new channels
-  const broadcastStopTyping = useCallback(() => {
+  const broadcastStopTyping = useCallback((threadId?: string) => {
     if (!user || !channelRef.current) return;
     
     channelRef.current.send({
       type: 'broadcast',
       event: 'stop-typing',
-      payload: { userId: user.id },
+      payload: { userId: user.id, threadId },
     });
   }, [user]);
 
@@ -475,8 +532,15 @@ export function useChat(conversationId: string) {
   const toggleReaction = useCallback(async (messageId: string, emoji: string) => {
     if (!user) return;
 
-    // Find the message
-    const message = messages.find(m => m.id === messageId);
+    // Find the message in main messages or thread replies
+    let message = messages.find(m => m.id === messageId);
+    let isThreadMessage = false;
+    
+    if (!message && activeThread) {
+      message = [activeThread.parentMessage, ...activeThread.replies].find(m => m.id === messageId);
+      isThreadMessage = true;
+    }
+    
     if (!message) return;
 
     // Calculate new reactions (array-based to maintain order)
@@ -528,9 +592,26 @@ export function useChat(conversationId: string) {
     }
 
     // Optimistically update UI
-    setMessages(prev => prev.map(m =>
-      m.id === messageId ? { ...m, reactions: newReactions } : m
-    ));
+    if (isThreadMessage) {
+      // Update thread message
+      setActiveThread(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          parentMessage: prev.parentMessage.id === messageId 
+            ? { ...prev.parentMessage, reactions: newReactions }
+            : prev.parentMessage,
+          replies: prev.replies.map(m =>
+            m.id === messageId ? { ...m, reactions: newReactions } : m
+          ),
+        };
+      });
+    } else {
+      // Update main message
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, reactions: newReactions } : m
+      ));
+    }
 
     // Update database
     try {
@@ -542,14 +623,186 @@ export function useChat(conversationId: string) {
       if (error) {
         console.error('Error updating reactions:', error);
         // Revert optimistic update on error
-        setMessages(prev => prev.map(m =>
-          m.id === messageId ? { ...m, reactions: currentReactions } : m
-        ));
+        if (isThreadMessage) {
+          setActiveThread(prev => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              parentMessage: prev.parentMessage.id === messageId 
+                ? { ...prev.parentMessage, reactions: currentReactions }
+                : prev.parentMessage,
+              replies: prev.replies.map(m =>
+                m.id === messageId ? { ...m, reactions: currentReactions } : m
+              ),
+            };
+          });
+        } else {
+          setMessages(prev => prev.map(m =>
+            m.id === messageId ? { ...m, reactions: currentReactions } : m
+          ));
+        }
       }
     } catch (error) {
       console.error('Error updating reactions:', error);
     }
-  }, [messages, user]);
+  }, [messages, user, activeThread]);
+
+  // Load thread messages
+  const loadThread = useCallback(async (parentMessageId: string) => {
+    try {
+      // Get parent message from local messages first
+      let parentMsg = messages.find(m => m.id === parentMessageId);
+      
+      // If not found locally, fetch from database
+      if (!parentMsg) {
+        const { data: parentData, error: parentError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('id', parentMessageId)
+          .single();
+        
+        if (parentError) throw parentError;
+        
+        if (parentData) {
+          let reactions: Array<{ emoji: string; userIds: string[] }> | undefined;
+          if (parentData.reactions) {
+            if (Array.isArray(parentData.reactions)) {
+              reactions = parentData.reactions;
+            } else {
+              reactions = Object.entries(parentData.reactions as Record<string, string[]>).map(([emoji, userIds]) => ({
+                emoji,
+                userIds
+              }));
+            }
+          }
+          
+          parentMsg = {
+            id: parentData.id,
+            author: parentData.author_name,
+            avatar: parentData.author_avatar || "https://i.pravatar.cc/150?img=1",
+            timestamp: parentData.created_at,
+            text: parentData.text,
+            imageUrl: parentData.image_url,
+            imageUrls: parentData.image_urls || undefined,
+            reactions,
+            thread_id: parentData.thread_id,
+            replyCount: parentData.reply_count,
+            lastReplyAt: parentData.last_reply_at,
+            replyAvatars: parentData.reply_avatars,
+          };
+        }
+      }
+      
+      if (!parentMsg) return;
+
+      // Load thread replies
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('thread_id', parentMessageId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (data) {
+        const formattedReplies: Message[] = data.map((msg) => {
+          let reactions: Array<{ emoji: string; userIds: string[] }> | undefined;
+          if (msg.reactions) {
+            if (Array.isArray(msg.reactions)) {
+              reactions = msg.reactions;
+            } else {
+              reactions = Object.entries(msg.reactions as Record<string, string[]>).map(([emoji, userIds]) => ({
+                emoji,
+                userIds
+              }));
+            }
+          }
+          
+          return {
+            id: msg.id,
+            author: msg.author_name,
+            avatar: msg.author_avatar || "https://i.pravatar.cc/150?img=1",
+            timestamp: msg.created_at,
+            text: msg.text,
+            imageUrl: msg.image_url,
+            imageUrls: msg.image_urls || undefined,
+            reactions,
+            threadId: msg.thread_id,
+          };
+        });
+
+        setActiveThread({
+          parentMessage: parentMsg,
+          replies: formattedReplies,
+        });
+        setThreadReplies(formattedReplies);
+      }
+    } catch (error) {
+      console.error('Error loading thread:', error);
+    }
+  }, [messages]);
+
+  // Send a reply in a thread
+  const sendThreadReply = useCallback(async (parentMessageId: string, text: string) => {
+    if (!user || !profile || !profile.full_name) {
+      console.error("User not authenticated or profile not loaded");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        author_id: user.id,
+        author_name: profile.full_name,
+        author_avatar: profile.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`,
+        text: text,
+        thread_id: parentMessageId,
+      });
+
+      if (error) throw error;
+
+      // Reload thread to get the new reply
+      await loadThread(parentMessageId);
+      
+      // Update thread metadata for parent message
+      await updateThreadMetadata(parentMessageId);
+    } catch (error) {
+      console.error("Error sending thread reply:", error);
+    }
+  }, [conversationId, user, profile, loadThread]);
+
+  // Update thread metadata (reply count, last reply time, avatars)
+  const updateThreadMetadata = useCallback(async (parentMessageId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('author_avatar, created_at')
+        .eq('thread_id', parentMessageId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const replyCount = data.length;
+        const lastReplyAt = data[0].created_at;
+        const replyAvatars = [...new Set(data.map(m => m.author_avatar))].filter(Boolean);
+
+        setMessages(prev => prev.map(m =>
+          m.id === parentMessageId
+            ? { ...m, replyCount, lastReplyAt, replyAvatars }
+            : m
+        ));
+      }
+    } catch (error) {
+      console.error('Error updating thread metadata:', error);
+    }
+  }, []);
+
+  // Close thread
+  const closeThread = useCallback(() => {
+    setActiveThread(null);
+    setThreadReplies([]);
+  }, []);
 
   return {
     messages,
@@ -559,5 +812,9 @@ export function useChat(conversationId: string) {
     broadcastTyping,
     broadcastStopTyping,
     toggleReaction,
+    activeThread,
+    loadThread,
+    sendThreadReply,
+    closeThread,
   };
 }

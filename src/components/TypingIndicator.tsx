@@ -3,7 +3,7 @@
 import { memo } from "react";
 
 type TypingIndicatorProps = {
-  typingUsers: { userId: string; userName: string }[];
+  typingUsers: { userId: string; userName: string; threadId?: string }[];
 };
 
 function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
