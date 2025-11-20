@@ -21,7 +21,7 @@ interface AppLibraryViewProps {
  * - Uses shared state from parent to ensure Sidebar updates immediately
  */
 export default function AppLibraryView({ sharedToggleApp, sharedIsAppEnabled }: AppLibraryViewProps) {
-  const [selectedCategory, setSelectedCategory] = useState(APP_CATEGORIES.PRODUCTIVITY);
+  const [selectedCategory, setSelectedCategory] = useState<string>(APP_CATEGORIES.PRODUCTIVITY);
   const [appToDisable, setAppToDisable] = useState<AppDefinition | null>(null);
 
   const appsInCategory = getAppsByCategory(selectedCategory);
