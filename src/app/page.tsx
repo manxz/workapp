@@ -26,6 +26,11 @@ const ProjectsApp = dynamic(() => import("@/apps/projects/ProjectsApp"), {
   ssr: false,
 });
 
+const NotepadApp = dynamic(() => import("@/apps/notepad/NotepadApp"), {
+  loading: () => <div className="flex-1 flex items-center justify-center"><p className="text-neutral-600">Loading Notepad...</p></div>,
+  ssr: false,
+});
+
 const AppLibraryView = dynamic(() => import("@/apps/library/AppLibraryView"), {
   loading: () => <div className="flex-1 flex items-center justify-center"><p className="text-neutral-600">Loading Apps...</p></div>,
   ssr: false,
@@ -50,10 +55,10 @@ function HomeContent() {
   }, [unreadCount]);
   
   // Initialize active view from localStorage
-  const [activeView, setActiveView] = useState<"chat" | "projects" | "apps">(() => {
+  const [activeView, setActiveView] = useState<"chat" | "projects" | "notes" | "apps">(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem("activeView");
-      return (saved as "chat" | "projects" | "apps") || "chat";
+      return (saved as "chat" | "projects" | "notes" | "apps") || "chat";
     }
     return "chat";
   });
@@ -74,6 +79,9 @@ function HomeContent() {
     // If viewing a disabled app, redirect to chat
     // (Chat is always enabled, so no need to check it)
     if (activeView === "projects" && !isAppEnabled("projects")) {
+      setActiveView("chat");
+    }
+    if (activeView === "notes" && !isAppEnabled("notes")) {
       setActiveView("chat");
     }
   }, [activeView, isAppEnabled, appsLoading, loading, channelsLoading, projectsLoading]);
@@ -154,6 +162,7 @@ function HomeContent() {
             deleteTask={deleteTask}
           />
         )}
+        {activeView === "notes" && <NotepadApp />}
         {activeView === "apps" && <AppLibraryView sharedToggleApp={toggleApp} sharedIsAppEnabled={isAppEnabled} />}
       </div>
     </AppProvider>

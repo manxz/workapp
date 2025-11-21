@@ -46,17 +46,17 @@ export const AVAILABLE_APPS: Record<AppId, AppDefinition> = {
     isWIP: false,
   },
 
-  // Future apps (WIP)
+  // Notepad app (Lists and Notes)
   notes: {
     id: 'notes',
-    name: 'Notes',
-    icon: 'Note',
-    component: () => Promise.resolve({ default: () => null }), // Placeholder
+    name: 'Notepad',
+    icon: 'Notepad',
+    component: () => import('./notepad/NotepadApp'),
     defaultEnabled: false,
-    description: 'Personal notes app. We all need our own space',
+    description: 'Keep track of tasks and thoughts',
     category: 'Productivity',
     canDisable: true,
-    isWIP: true,
+    isWIP: false,
   },
 
   crm: {

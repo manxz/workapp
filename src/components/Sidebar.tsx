@@ -1,11 +1,11 @@
 "use client";
 
-import { House, ChatCenteredText, Cube, Plus, SignOut } from "@phosphor-icons/react";
+import { House, ChatCenteredText, Cube, Notepad, Plus, SignOut } from "@phosphor-icons/react";
 import { useAuth } from "@/contexts/AuthContext";
 
 type SidebarProps = {
-  activeView: "chat" | "projects" | "apps";
-  onViewChange: (view: "chat" | "projects" | "apps") => void;
+  activeView: "chat" | "projects" | "notes" | "apps";
+  onViewChange: (view: "chat" | "projects" | "notes" | "apps") => void;
   hasUnreadMessages?: boolean;
   enabledApps: (appId: string) => boolean;
   appsLoading: boolean;
@@ -23,6 +23,7 @@ export default function Sidebar({
   // Only show enabled apps (wait for loading to complete to prevent flash)
   const showChat = !appsLoading && enabledApps('chat');
   const showProjects = !appsLoading && enabledApps('projects');
+  const showNotepad = !appsLoading && enabledApps('notes');
 
   return (
     <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen items-center px-0 py-4 w-16 fixed left-0 top-0 z-40 overflow-visible">
@@ -75,6 +76,27 @@ export default function Sidebar({
               {/* Tooltip */}
               <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
                 Projects
+              </div>
+            </button>
+          )}
+
+          {/* Notepad Icon - Only show if enabled */}
+          {showNotepad && (
+            <button
+              onClick={() => onViewChange("notes")}
+              className={`flex items-center justify-center rounded-[7px] relative w-8 h-8 transition-colors group ${
+                activeView === "notes"
+                  ? "bg-neutral-200"
+                  : "hover:bg-neutral-200"
+              }`}
+            >
+              <Notepad
+                size={16}
+                weight={activeView === "notes" ? "fill" : "regular"}
+              />
+              {/* Tooltip */}
+              <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
+                Notepad
               </div>
             </button>
           )}
