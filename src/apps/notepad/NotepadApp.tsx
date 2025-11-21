@@ -153,8 +153,8 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
           <ListsView
             listName={selectedList.name}
             items={items}
-            uncompletedCount={uncompletedItems.length}
-            completedCount={completedItems.length}
+            uncompletedCount={itemsLoading ? (selectedList.total - selectedList.completed) : uncompletedItems.length}
+            completedCount={itemsLoading ? selectedList.completed : completedItems.length}
             onToggleItem={handleToggleItem}
             onCreateItem={handleCreateItem}
             onUpdateItem={handleUpdateItem}

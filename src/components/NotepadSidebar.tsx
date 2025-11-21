@@ -74,7 +74,7 @@ export default function NotepadSidebar({
                   {list.name}
                 </p>
 
-                <div className="flex items-center gap-0.5">
+                <div className="flex items-center gap-[2px]">
                   <span className="text-[12px] font-medium text-neutral-500">
                     {list.completed}/{list.total}
                   </span>
