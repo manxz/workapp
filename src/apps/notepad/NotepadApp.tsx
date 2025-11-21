@@ -16,7 +16,7 @@ type List = {
 };
 
 export default function NotepadApp() {
-  const { lists: rawLists, loading: listsLoading, createList, deleteList } = useLists();
+  const { lists: rawLists, loading: listsLoading, createList, deleteList, refreshLists } = useLists();
   const [selectedListId, setSelectedListId] = useState<string | undefined>();
   const [showNewListModal, setShowNewListModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -34,13 +34,11 @@ export default function NotepadApp() {
 
   // Transform raw lists to include completion counts
   const lists: List[] = useMemo(() => {
-    // For now, we'll need to calculate counts client-side
-    // In a production app, you'd want to do this in the database or cache it
     return rawLists.map((list) => ({
       id: list.id,
       name: list.name,
-      completed: 0, // Will be updated when we fetch items
-      total: 0, // Will be updated when we fetch items
+      completed: list.completed_count || 0,
+      total: list.total_count || 0,
     }));
   }, [rawLists]);
 
@@ -81,11 +79,15 @@ export default function NotepadApp() {
   // Handle item creation
   const handleCreateItem = async (content: string) => {
     await createItem(content);
+    // Manually refresh lists to update counts
+    refreshLists();
   };
 
   // Handle item toggle
   const handleToggleItem = async (itemId: string) => {
     await toggleItem(itemId);
+    // Manually refresh lists to update counts
+    refreshLists();
   };
 
   // Handle item update
@@ -128,11 +130,7 @@ export default function NotepadApp() {
   return (
     <>
       <NotepadSidebar
-        lists={lists.map((list) => ({
-          ...list,
-          completed: selectedList?.id === list.id ? completedItems.length : 0,
-          total: selectedList?.id === list.id ? items.length : 0,
-        }))}
+        lists={lists}
         selectedId={selectedListId}
         selectedType="list"
         onSelectList={(list) => setSelectedListId(list.id)}

@@ -8,6 +8,8 @@ export type List = {
   user_id: string;
   created_at: string;
   updated_at: string;
+  completed_count?: number;
+  total_count?: number;
 };
 
 /**
@@ -25,7 +27,7 @@ export function useLists() {
   const [loading, setLoading] = useState(true);
 
   /**
-   * Fetches all lists for the current user.
+   * Fetches all lists for the current user with item counts.
    */
   const fetchLists = useCallback(async () => {
     if (!user) {
@@ -36,14 +38,27 @@ export function useLists() {
     try {
       const { data, error } = await supabase
         .from('lists')
-        .select('*')
+        .select(`
+          *,
+          list_items(id, completed)
+        `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
       if (error) {
         console.error('Error fetching lists:', error);
       } else if (data) {
-        setLists(data);
+        // Transform data to include counts
+        const listsWithCounts = data.map((list: any) => ({
+          id: list.id,
+          name: list.name,
+          user_id: list.user_id,
+          created_at: list.created_at,
+          updated_at: list.updated_at,
+          total_count: list.list_items?.length || 0,
+          completed_count: list.list_items?.filter((item: any) => item.completed).length || 0,
+        }));
+        setLists(listsWithCounts);
       }
     } catch (error) {
       console.error('Error in fetchLists:', error);
@@ -60,13 +75,14 @@ export function useLists() {
   }, [fetchLists]);
 
   /**
-   * Subscribe to real-time changes for lists.
+   * Subscribe to real-time changes for lists and list items.
+   * Re-fetches all lists when changes occur to update counts.
    */
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel(`lists:${user.id}`)
+      .channel(`lists_and_items:${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -75,18 +91,22 @@ export function useLists() {
           table: 'lists',
           filter: `user_id=eq.${user.id}`,
         },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setLists((prev) => [...prev, payload.new as List]);
-          } else if (payload.eventType === 'UPDATE') {
-            setLists((prev) =>
-              prev.map((list) =>
-                list.id === payload.new.id ? (payload.new as List) : list
-              )
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setLists((prev) => prev.filter((list) => list.id !== payload.old.id));
-          }
+        () => {
+          // Re-fetch to get updated counts
+          fetchLists();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'list_items',
+        },
+        () => {
+          // Re-fetch lists to update counts when items change
+          // Small delay to ensure database operation completes
+          setTimeout(() => fetchLists(), 100);
         }
       )
       .subscribe();
@@ -94,7 +114,7 @@ export function useLists() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, fetchLists]);
 
   /**
    * Creates a new list.

@@ -44,7 +44,10 @@ export function useListItems(listId?: string) {
         .order('position', { ascending: true });
 
       if (error) {
-        console.error('Error fetching list items:', error);
+        // Only log error if it's not just an empty result
+        if (error.code !== 'PGRST116') {
+          console.error('Error fetching list items:', error);
+        }
       } else if (data) {
         setItems(data);
       }
