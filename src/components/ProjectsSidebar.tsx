@@ -29,16 +29,14 @@ export default function ProjectsSidebar({
   return (
     <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col gap-2 h-screen w-[200px] py-4 fixed left-16 top-0">
       {/* Header */}
-      <div className="pl-2">
-        <div className="flex items-center justify-between px-2 py-1.5">
-          <h2 className="text-lg font-medium text-black">Projects</h2>
-          <button 
-            onClick={() => setShowModal(true)}
-            className="text-black hover:bg-neutral-200 rounded-md w-6 h-6 flex items-center justify-center transition-colors"
-          >
-            <Plus size={16} weight="regular" />
-          </button>
-        </div>
+      <div className="flex items-center justify-between pl-4 pr-2 py-1.5 h-6">
+        <h2 className="text-lg font-medium text-black">Projects</h2>
+        <button 
+          onClick={() => setShowModal(true)}
+          className="text-black hover:bg-neutral-200 rounded-md w-6 h-6 flex items-center justify-center transition-colors"
+        >
+          <Plus size={16} weight="regular" />
+        </button>
       </div>
 
       {/* Projects Section */}
