@@ -9,7 +9,6 @@ import ChatHeader from "@/components/ChatHeader";
 import ChatMessages from "@/components/ChatMessages";
 import ThreadPanel from "@/components/ThreadPanel";
 import TypingIndicator from "@/components/TypingIndicator";
-import NotificationPrompt from "@/components/NotificationPrompt";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/hooks/useChat";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
@@ -291,8 +290,6 @@ export default function ChatApp({ channels, users }: ChatAppProps) {
             
             {/* Typing indicator */}
             <TypingIndicator typingUsers={typingUsers} />
-            
-            <NotificationPrompt />
             
             {/* Thread Panel */}
             {activeThread && (
