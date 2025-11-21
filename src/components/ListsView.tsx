@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, KeyboardEvent } from "react";
+import { useState, KeyboardEvent, useRef, useEffect } from "react";
 import { Trash, Eye, EyeSlash } from "@phosphor-icons/react";
 import ProgressIndicator from "./ProgressIndicator";
 import Checkbox from "./Checkbox";
@@ -36,6 +36,12 @@ export default function ListsView({
   const [showCompleted, setShowCompleted] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
+  const newItemInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus the new item input when the list changes (new list selected or created)
+  useEffect(() => {
+    newItemInputRef.current?.focus();
+  }, [listName]);
 
   const uncompletedItems = items.filter((item) => !item.completed);
   const completedItems = items.filter((item) => item.completed);
@@ -101,6 +107,7 @@ export default function ListsView({
         <div className="flex items-center gap-2 px-4 py-1">
           <Checkbox state="add" />
           <input
+            ref={newItemInputRef}
             type="text"
             value={newItemText}
             onChange={(e) => setNewItemText(e.target.value)}

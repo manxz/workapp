@@ -45,7 +45,7 @@ function HomeContent() {
   const { users, loading: usersLoading } = useUsers();
   const { projects, createProject, deleteProject, loading: projectsLoading } = useProjects();
   const { tasks, createTask, updateTask, deleteTask, loading: tasksLoading } = useTasks();
-  const { lists, createList, deleteList, loading: listsLoading } = useLists();
+  const { lists, createList, deleteList, refreshLists, loading: listsLoading } = useLists();
   
   // Update browser tab title with unread count
   useEffect(() => {
@@ -169,6 +169,7 @@ function HomeContent() {
             lists={lists}
             createList={createList}
             deleteList={deleteList}
+            refreshLists={refreshLists}
           />
         )}
         {activeView === "apps" && <AppLibraryView sharedToggleApp={toggleApp} sharedIsAppEnabled={isAppEnabled} />}

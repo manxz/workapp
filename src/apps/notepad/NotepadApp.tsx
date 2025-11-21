@@ -5,7 +5,7 @@ import NotepadSidebar from "@/components/NotepadSidebar";
 import ListsView from "@/components/ListsView";
 import NewListModal from "@/components/NewListModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
-import { useLists, type List as ListType } from "@/hooks/useLists";
+import { type List as ListType } from "@/hooks/useLists";
 import { useListItems } from "@/hooks/useListItems";
 
 type List = {
@@ -19,10 +19,10 @@ interface NotepadAppProps {
   lists: ListType[];
   createList: (name: string) => Promise<ListType | null>;
   deleteList: (listId: string) => Promise<boolean>;
+  refreshLists: () => Promise<void>;
 }
 
-export default function NotepadApp({ lists: rawLists, createList, deleteList }: NotepadAppProps) {
-  const { refreshLists } = useLists();
+export default function NotepadApp({ lists: rawLists, createList, deleteList, refreshLists }: NotepadAppProps) {
   const [selectedListId, setSelectedListId] = useState<string | undefined>();
   const [showNewListModal, setShowNewListModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
