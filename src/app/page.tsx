@@ -67,15 +67,16 @@ function HomeContent() {
 
   // Redirect if current app is disabled
   useEffect(() => {
-    // Only redirect once loading is complete
-    if (appsLoading) return;
+    // Only redirect once loading is complete AND preferences are loaded
+    // Don't redirect during initial load when enabledApps might be empty
+    if (appsLoading || loading || channelsLoading || projectsLoading) return;
 
     // If viewing a disabled app, redirect to chat
     // (Chat is always enabled, so no need to check it)
     if (activeView === "projects" && !isAppEnabled("projects")) {
       setActiveView("chat");
     }
-  }, [activeView, isAppEnabled, appsLoading]);
+  }, [activeView, isAppEnabled, appsLoading, loading, channelsLoading, projectsLoading]);
 
   // Cross-app communication interface
   const appCommunication: AppCommunication = {
