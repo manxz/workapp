@@ -12,6 +12,7 @@ import { useChannels } from "@/hooks/useChannels";
 import { useUsers } from "@/hooks/useUsers";
 import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
+import { useLists } from "@/hooks/useLists";
 import { AppProvider, AppCommunication } from "@/apps/AppContext";
 import { AVAILABLE_APPS } from "@/apps/registry";
 
@@ -44,6 +45,7 @@ function HomeContent() {
   const { users, loading: usersLoading } = useUsers();
   const { projects, createProject, deleteProject, loading: projectsLoading } = useProjects();
   const { tasks, createTask, updateTask, deleteTask, loading: tasksLoading } = useTasks();
+  const { lists, createList, deleteList, loading: listsLoading } = useLists();
   
   // Update browser tab title with unread count
   useEffect(() => {
@@ -74,7 +76,7 @@ function HomeContent() {
   useEffect(() => {
     // Only redirect once loading is complete AND preferences are loaded
     // Don't redirect during initial load when enabledApps might be empty
-    if (appsLoading || loading || channelsLoading || projectsLoading) return;
+    if (appsLoading || loading || channelsLoading || projectsLoading || listsLoading) return;
 
     // If viewing a disabled app, redirect to chat
     // (Chat is always enabled, so no need to check it)
@@ -162,7 +164,13 @@ function HomeContent() {
             deleteTask={deleteTask}
           />
         )}
-        {activeView === "notes" && <NotepadApp />}
+        {activeView === "notes" && (
+          <NotepadApp 
+            lists={lists}
+            createList={createList}
+            deleteList={deleteList}
+          />
+        )}
         {activeView === "apps" && <AppLibraryView sharedToggleApp={toggleApp} sharedIsAppEnabled={isAppEnabled} />}
       </div>
     </AppProvider>

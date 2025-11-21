@@ -76,7 +76,7 @@ export default function ListsView({
   return (
     <div className="flex flex-col h-screen flex-1 bg-white">
       {/* Header */}
-      <div className="border-b border-neutral-200 flex items-center justify-between px-4 py-4 flex-shrink-0">
+      <div className="border-b border-neutral-200 flex items-center justify-between px-4 h-14 flex-shrink-0">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-medium text-black">{listName}</h2>
           <span className="text-base font-medium text-neutral-500">

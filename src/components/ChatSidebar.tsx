@@ -44,16 +44,18 @@ export default function ChatSidebar({
       {/* Channels Section */}
       <div className="flex flex-col w-full">
         {/* Channels Header */}
-        <div className="flex items-center justify-between px-4 pr-5 py-1.5">
-          <div className="flex items-center gap-0.5">
-            <p className="text-[13px] font-semibold text-neutral-500">
-              Channels
-            </p>
-            <CaretDown size={16} className="text-neutral-500" weight="bold" />
+        <div className="px-2 pr-2">
+          <div className="flex items-center justify-between pl-2 pr-0 py-1.5">
+            <div className="flex items-center gap-0.5">
+              <p className="text-[13px] font-semibold text-neutral-500">
+                Channels
+              </p>
+              <CaretDown size={16} className="text-neutral-500" weight="bold" />
+            </div>
+            <button className="text-black hover:bg-neutral-200 rounded-md w-6 h-6 flex items-center justify-center transition-colors">
+              <Plus size={16} weight="regular" />
+            </button>
           </div>
-          <button className="text-neutral-500 hover:text-black transition-colors">
-            <Plus size={16} weight="bold" />
-          </button>
         </div>
 
         {/* Channels List */}
@@ -85,16 +87,18 @@ export default function ChatSidebar({
       {/* Direct Messages Section */}
       <div className="flex flex-col w-full mt-2">
         {/* Direct Messages Header */}
-        <div className="flex items-center justify-between px-4 pr-5 py-1.5">
-          <div className="flex items-center gap-0.5">
-            <p className="text-[13px] font-semibold text-neutral-500">
-              Direct Messages
-            </p>
-            <CaretDown size={16} className="text-neutral-500" weight="bold" />
+        <div className="px-2 pr-2">
+          <div className="flex items-center justify-between pl-2 pr-0 py-1.5">
+            <div className="flex items-center gap-0.5">
+              <p className="text-[13px] font-semibold text-neutral-500">
+                Direct Messages
+              </p>
+              <CaretDown size={16} className="text-neutral-500" weight="bold" />
+            </div>
+            <button className="text-black hover:bg-neutral-200 rounded-md w-6 h-6 flex items-center justify-center transition-colors">
+              <Plus size={16} weight="regular" />
+            </button>
           </div>
-          <button className="text-neutral-500 hover:text-black transition-colors">
-            <Plus size={16} weight="bold" />
-          </button>
         </div>
 
         {/* Direct Messages List */}

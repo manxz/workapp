@@ -5,7 +5,7 @@ import NotepadSidebar from "@/components/NotepadSidebar";
 import ListsView from "@/components/ListsView";
 import NewListModal from "@/components/NewListModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
-import { useLists } from "@/hooks/useLists";
+import { useLists, type List as ListType } from "@/hooks/useLists";
 import { useListItems } from "@/hooks/useListItems";
 
 type List = {
@@ -15,8 +15,14 @@ type List = {
   total: number;
 };
 
-export default function NotepadApp() {
-  const { lists: rawLists, loading: listsLoading, createList, deleteList, refreshLists } = useLists();
+interface NotepadAppProps {
+  lists: ListType[];
+  createList: (name: string) => Promise<ListType | null>;
+  deleteList: (listId: string) => Promise<boolean>;
+}
+
+export default function NotepadApp({ lists: rawLists, createList, deleteList }: NotepadAppProps) {
+  const { refreshLists } = useLists();
   const [selectedListId, setSelectedListId] = useState<string | undefined>();
   const [showNewListModal, setShowNewListModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -94,15 +100,6 @@ export default function NotepadApp() {
   const handleUpdateItem = async (itemId: string, content: string) => {
     await updateItem(itemId, { content });
   };
-
-  // Show loading state
-  if (listsLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-neutral-600">Loading...</p>
-      </div>
-    );
-  }
 
   // Show empty state if no lists
   if (lists.length === 0) {
