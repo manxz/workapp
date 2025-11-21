@@ -127,7 +127,7 @@ export function useProjects() {
     }
   };
 
-  const deleteProject = async (projectId: string) => {
+  const deleteProject = async (projectId: string): Promise<{ success: boolean; error?: string }> => {
     try {
       // Delete all tasks associated with this project
       const { error: tasksError } = await supabase
@@ -143,12 +143,24 @@ export function useProjects() {
         .delete()
         .eq("id", projectId);
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        // Check if it's an RLS policy violation
+        if (projectError.code === '42501' || projectError.message?.includes('policy')) {
+          return { 
+            success: false, 
+            error: "You don't have permission to delete this project. Only the project creator can delete it." 
+          };
+        }
+        throw projectError;
+      }
 
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error("Error deleting project:", error);
-      return false;
+      return { 
+        success: false, 
+        error: error.message || "Failed to delete project" 
+      };
     }
   };
 

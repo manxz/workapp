@@ -87,9 +87,9 @@ export default function ProjectsApp({
       return;
     }
 
-    const success = await deleteProject(projectId);
+    const result = await deleteProject(projectId);
     
-    if (success) {
+    if (result.success) {
       // Switch to the first remaining project if the deleted project was selected
       if (projectId === selectedProject && projects.length > 1) {
         const remainingProjects = projects.filter(p => p.id !== projectId);
@@ -98,7 +98,7 @@ export default function ProjectsApp({
         }
       }
     } else {
-      alert("Failed to delete project");
+      alert(result.error || "Failed to delete project");
     }
   };
 
