@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CaretDown, Plus } from "@phosphor-icons/react";
+import { Plus } from "@phosphor-icons/react";
 import NewProjectModal from "./NewProjectModal";
 
 type Project = {
@@ -29,28 +29,20 @@ export default function ProjectsSidebar({
   return (
     <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col gap-2 h-screen w-[200px] py-4 fixed left-16 top-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-1.5 h-6">
-        <h2 className="text-lg font-medium text-black">Projects</h2>
+      <div className="pl-2">
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <h2 className="text-lg font-medium text-black">Projects</h2>
+          <button 
+            onClick={() => setShowModal(true)}
+            className="text-black hover:bg-neutral-200 rounded-md w-6 h-6 flex items-center justify-center transition-colors"
+          >
+            <Plus size={16} weight="regular" />
+          </button>
+        </div>
       </div>
 
       {/* Projects Section */}
       <div className="flex flex-col w-full">
-        {/* Projects Header */}
-        <div className="flex items-center justify-between px-4 pr-5 py-1.5">
-          <div className="flex items-center gap-0.5">
-            <p className="text-[13px] font-semibold text-neutral-500">
-              Projects
-            </p>
-            <CaretDown size={16} className="text-neutral-500" weight="bold" />
-          </div>
-          <button 
-            onClick={() => setShowModal(true)}
-            className="text-neutral-500 hover:text-black transition-colors"
-          >
-            <Plus size={16} weight="bold" />
-          </button>
-        </div>
-
         {/* Projects List */}
         <div className="flex flex-col px-2">
           {projects.map((project) => (
