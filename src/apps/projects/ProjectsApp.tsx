@@ -10,7 +10,7 @@ interface ProjectsAppProps {
   projects: Project[];
   tasks: Task[];
   createProject: (name: string, description?: string) => Promise<any>;
-  deleteProject: (id: string) => Promise<boolean>;
+  deleteProject: (id: string) => Promise<{ success: boolean; error?: string }>;
   createTask: (title: string, type: "task" | "feature", projectId: string) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
