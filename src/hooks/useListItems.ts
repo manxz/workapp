@@ -59,6 +59,14 @@ export function useListItems(listId?: string) {
   }, [user, listId]);
 
   /**
+   * Reset items when listId changes to prevent showing stale data
+   */
+  useEffect(() => {
+    setItems([]);
+    setLoading(true);
+  }, [listId]);
+
+  /**
    * Initial fetch of items.
    */
   useEffect(() => {

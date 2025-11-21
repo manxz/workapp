@@ -39,14 +39,28 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
   } = useListItems(selectedListId);
 
   // Transform raw lists to include completion counts
+  // For the selected list, use local items state for instant updates
   const lists: List[] = useMemo(() => {
-    return rawLists.map((list) => ({
-      id: list.id,
-      name: list.name,
-      completed: list.completed_count || 0,
-      total: list.total_count || 0,
-    }));
-  }, [rawLists]);
+    return rawLists.map((list) => {
+      // Use local items state for selected list for instant UI updates
+      // But only if items have loaded (not empty during transition)
+      if (list.id === selectedListId && !itemsLoading) {
+        return {
+          id: list.id,
+          name: list.name,
+          completed: completedItems.length,
+          total: items.length,
+        };
+      }
+      // Use database counts for other lists or while loading
+      return {
+        id: list.id,
+        name: list.name,
+        completed: list.completed_count || 0,
+        total: list.total_count || 0,
+      };
+    });
+  }, [rawLists, selectedListId, items, completedItems, itemsLoading]);
 
   // Auto-select first list on load
   useEffect(() => {
@@ -85,14 +99,14 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
   // Handle item creation
   const handleCreateItem = async (content: string) => {
     await createItem(content);
-    // Manually refresh lists to update counts
+    // Refresh in background to update database counts for other lists
     refreshLists();
   };
 
   // Handle item toggle
   const handleToggleItem = async (itemId: string) => {
     await toggleItem(itemId);
-    // Manually refresh lists to update counts
+    // Refresh in background to update database counts for other lists
     refreshLists();
   };
 
