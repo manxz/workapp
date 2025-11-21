@@ -36,7 +36,7 @@ export const AVAILABLE_APPS: Record<AppId, AppDefinition> = {
   
   projects: {
     id: 'projects',
-    name: 'Tracker',
+    name: 'Projects',
     icon: 'Cube',
     component: () => import('./projects/ProjectsApp'),
     defaultEnabled: true,
