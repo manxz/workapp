@@ -51,7 +51,7 @@ export default function AppCard({ app, isEnabled, onToggle }: AppCardProps) {
             {Icon && (
               <Icon
                 size={24}
-                weight="regular"
+                weight="fill"
                 className="text-[#1d1d1f]"
               />
             )}
@@ -64,7 +64,7 @@ export default function AppCard({ app, isEnabled, onToggle }: AppCardProps) {
           Icon && (
             <Icon
               size={24}
-              weight="regular"
+              weight="fill"
               className="text-[#1d1d1f]"
             />
           )
