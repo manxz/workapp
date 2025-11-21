@@ -75,7 +75,7 @@ export default function AppCard({ app, isEnabled, onToggle }: AppCardProps) {
           <p className="text-[16px] font-medium text-[#1d1d1f] leading-normal">
             {app.name}
           </p>
-          <p className="text-[12px] font-normal text-[#6a6a6a] leading-normal">
+          <p className="text-[13px] font-normal text-[#6a6a6a] leading-normal">
             {app.description}
           </p>
         </div>
