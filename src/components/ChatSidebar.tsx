@@ -110,7 +110,7 @@ export default function ChatSidebar({
               <button
                 key={dm.id}
                 onClick={() => onSelectChat?.(dm)}
-                className={`flex items-center justify-between px-2 py-1.5 rounded-[7px] transition-colors ${
+                className={`flex items-center justify-between px-2 py-1.5 rounded-[7px] transition-colors group ${
                   selectedId === dm.id && selectedType === "dm"
                     ? "bg-neutral-200"
                     : "hover:bg-neutral-200"
@@ -128,6 +128,7 @@ export default function ChatSidebar({
                   {(() => {
                     const presence = getPresence(dm.userId);
                     const isOnline = presence.online;
+                    const isSelected = selectedId === dm.id && selectedType === "dm";
                     
                     return (
                       <div
@@ -135,10 +136,13 @@ export default function ChatSidebar({
                           isOnline
                             ? 'bg-[#34C759]' // Green for online
                             : 'bg-[#FAFAFA] border border-[#8E8E93]' // Light gray with border for offline
+                        } ${
+                          isSelected
+                            ? '[box-shadow:0_0_0_1px_#e5e5e5]'
+                            : '[box-shadow:0_0_0_1px_#FAFAFA] group-hover:[box-shadow:0_0_0_1px_#e5e5e5]'
                         }`}
                         style={{ 
                           gridArea: '1 / 1',
-                          boxShadow: '0 0 0 1px #FAFAFA' // White outer stroke
                         }}
                       />
                     );
