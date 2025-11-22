@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { showMessageNotification, requestNotificationPermission } from "@/lib/notifications";
+import { extractMentionedUserIds } from "@/lib/mentionUtils";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   TYPING_INDICATOR_TIMEOUT,
@@ -277,6 +278,9 @@ export function useChat(conversationId: string) {
           }
         }
 
+        // Extract mentioned user IDs
+        const mentionedUserIds = extractMentionedUserIds(text);
+
         // Insert message to database
         const { error } = await supabase.from("messages").insert({
           conversation_id: conversationId,
@@ -285,6 +289,7 @@ export function useChat(conversationId: string) {
           author_avatar: profile.avatar_url || `${USER_AVATAR_PLACEHOLDER}${user.id}`,
           text: text,
           image_urls: imageUrls.length > 0 ? imageUrls : null,
+          mentions: mentionedUserIds, // Store mentioned user IDs
         });
 
         if (error) {

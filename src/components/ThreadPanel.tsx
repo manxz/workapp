@@ -5,6 +5,7 @@ import { useRef, useEffect, useCallback } from "react";
 import type { Message } from "@/hooks/useChat";
 import ChatInput from "./ChatInput";
 import TypingIndicator from "./TypingIndicator";
+import MentionText from "./MentionText";
 import { formatTime, formatDateDivider, shouldShowDateDivider } from "@/lib/dateUtils";
 import { linkifyText } from "@/lib/textUtils";
 import { QUICK_REACTIONS, COLORS } from "@/lib/constants";
@@ -135,7 +136,10 @@ export default function ThreadPanel({
                     
                     {message.text && (
                       <p className="text-[13px] font-medium text-black opacity-90 leading-normal whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                        {linkifyText(message.text)}
+                        <MentionText 
+                          text={message.text} 
+                          currentUserId={currentUserId}
+                        />
                       </p>
                     )}
                     

@@ -2,12 +2,17 @@
 
 import { Smiley, At, Paperclip, ArrowUp, X } from "@phosphor-icons/react";
 import { useState, useRef, useEffect, useCallback } from "react";
+import MentionInput from "./MentionInput";
 import {
   MAX_FILE_UPLOADS,
   MAX_IMAGE_PREVIEW_HEIGHT,
-  TEXTAREA_MAX_HEIGHT,
-  TYPING_BROADCAST_DELAY,
 } from "@/lib/constants";
+
+type User = {
+  id: string;
+  name: string;
+  avatar: string;
+};
 
 type ChatInputProps = {
   channelName?: string;
@@ -15,43 +20,33 @@ type ChatInputProps = {
   onTyping?: () => void;
   onStopTyping?: () => void;
   externalFiles?: File[];
+  users?: User[];
 };
 
-export default function ChatInput({ channelName = "Design", onSendMessage, onTyping, onStopTyping, externalFiles }: ChatInputProps) {
-  const [message, setMessage] = useState("");
+export default function ChatInput({ 
+  channelName = "Design", 
+  onSendMessage, 
+  onTyping, 
+  onStopTyping, 
+  externalFiles, 
+  users = [] 
+}: ChatInputProps) {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const processedFilesRef = useRef<Set<string>>(new Set());
 
-  const handleSend = useCallback(() => {
-    if (message.trim() || uploadedFiles.length > 0) {
-      onSendMessage?.(message, uploadedFiles.length > 0 ? uploadedFiles : undefined);
-      setMessage("");
-      setUploadedFiles([]);
-      setPreviewUrls([]);
-      processedFilesRef.current.clear(); // Clear processed files tracking
-      onStopTyping?.();
-      // Clear typing timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
-      // Reset textarea height and overflow
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "";
-        textareaRef.current.style.overflowY = "hidden";
-      }
-    }
-  }, [message, uploadedFiles, onSendMessage, onStopTyping]);
+  const handleSendWithFiles = useCallback((message: string) => {
+    onSendMessage?.(message, uploadedFiles.length > 0 ? uploadedFiles : undefined);
+    setUploadedFiles([]);
+    setPreviewUrls([]);
+    processedFilesRef.current.clear();
+  }, [uploadedFiles, onSendMessage]);
 
   const handleFileSelect = useCallback((files: File | File[]) => {
     const fileArray = Array.isArray(files) ? files : [files];
     const imageFiles = fileArray.filter(f => f.type.startsWith('image/'));
     
-    // Filter out already processed files using a unique key (name + size + lastModified)
     const newImageFiles = imageFiles.filter(file => {
       const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
       if (processedFilesRef.current.has(fileKey)) {
@@ -63,12 +58,10 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
     
     if (newImageFiles.length > 0) {
       setUploadedFiles((prev) => {
-        // Cap at maximum allowed file uploads
         const combined = [...prev, ...newImageFiles];
         return combined.slice(0, MAX_FILE_UPLOADS);
       });
       
-      // Read all files and collect preview URLs
       const readerPromises = newImageFiles.map((file) => {
         return new Promise<string>((resolve) => {
           const reader = new FileReader();
@@ -79,10 +72,8 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
         });
       });
       
-      // Update preview URLs once all files are read
       Promise.all(readerPromises).then((urls) => {
         setPreviewUrls((prev) => {
-          // Cap at maximum allowed preview URLs
           const combined = [...prev, ...urls];
           return combined.slice(0, MAX_FILE_UPLOADS);
         });
@@ -98,7 +89,6 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
   };
 
   const removeFile = (index: number) => {
-    // Get the file being removed to also remove from processed set
     const fileToRemove = uploadedFiles[index];
     if (fileToRemove) {
       const fileKey = `${fileToRemove.name}-${fileToRemove.size}-${fileToRemove.lastModified}`;
@@ -112,82 +102,15 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value);
-    
-    // Broadcast typing
-    if (e.target.value.length > 0) {
-      onTyping?.();
-      
-      // Clear previous timeout
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-      }
-      
-      // Set new timeout to stop typing after inactivity
-      typingTimeoutRef.current = setTimeout(() => {
-        onStopTyping?.();
-      }, TYPING_BROADCAST_DELAY);
-    } else {
-      // Empty input, stop typing immediately
-      onStopTyping?.();
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = null;
-      }
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  // Initialize textarea on mount
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.overflowY = "hidden";
-    }
-  }, []);
-
-  // Auto-resize textarea as content grows
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = "";
-      const newHeight = Math.min(textarea.scrollHeight, TEXTAREA_MAX_HEIGHT);
-      textarea.style.height = `${newHeight}px`;
-      textarea.style.overflowY = textarea.scrollHeight > TEXTAREA_MAX_HEIGHT ? "auto" : "hidden";
-    }
-  }, [message]);
-
-  // Handle external file drops (from page-level drag & drop)
   useEffect(() => {
     if (externalFiles && externalFiles.length > 0) {
       handleFileSelect(externalFiles);
     }
   }, [externalFiles, handleFileSelect]);
 
-  // Global Enter key handler for sending image without focus
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey && uploadedFiles.length > 0 && !message.trim()) {
-        e.preventDefault();
-        handleSend();
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [uploadedFiles, message, handleSend]);
-
   return (
-    <div className="px-4">
-        <div 
-            className="bg-neutral-50 border border-neutral-200 rounded-xl flex items-end justify-between pl-3 pr-2 py-2 gap-2"
-          >
+    <div className="px-4 relative">
+      <div className="bg-neutral-50 border border-neutral-200 rounded-xl flex items-end justify-between pl-3 pr-2 py-2 gap-2">
         <div className="flex flex-col gap-2 flex-1">
           {/* File previews */}
           {previewUrls.length > 0 && (
@@ -212,16 +135,13 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
             </div>
           )}
 
-          {/* Text input - always visible */}
-          <textarea
-            ref={textareaRef}
-            value={message}
-            onChange={handleChange}
-            onKeyDown={handleKeyDown}
-            placeholder={`Message ${channelName}`}
-            className="w-full bg-transparent outline-none text-[13px] font-medium text-neutral-600 placeholder:text-neutral-400 placeholder:opacity-70 resize-none leading-[20px] py-[2px] box-border"
-            style={{ maxHeight: `${TEXTAREA_MAX_HEIGHT}px` }}
-            rows={1}
+          {/* Text input with mention support */}
+          <MentionInput
+            channelName={channelName}
+            onSendMessage={handleSendWithFiles}
+            onTyping={onTyping}
+            onStopTyping={onStopTyping}
+            users={users}
           />
         </div>
         
@@ -245,15 +165,6 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
             <Smiley size={16} weight="regular" className="text-neutral-600" />
           </button>
 
-          {/* Mention Icon */}
-          <button
-            type="button"
-            className="p-1 hover:bg-neutral-200 rounded transition-colors"
-            aria-label="Mention someone"
-          >
-            <At size={16} weight="regular" className="text-neutral-600" />
-          </button>
-
           {/* Attachment Icon */}
           <button
             type="button"
@@ -267,9 +178,7 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
           {/* Send Button */}
           <button
             type="button"
-            onClick={handleSend}
-            disabled={!message.trim() && uploadedFiles.length === 0}
-            className="bg-black p-1 rounded-md hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-black p-1 rounded-md hover:bg-neutral-800 transition-colors"
             aria-label="Send message"
           >
             <ArrowUp size={16} weight="regular" className="text-white" />
@@ -279,4 +188,3 @@ export default function ChatInput({ channelName = "Design", onSendMessage, onTyp
     </div>
   );
 }
-

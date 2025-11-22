@@ -43,9 +43,13 @@ export function useGlobalMessageListener(
           }
 
           const msgConversationId = newMsg.conversation_id as string;
+          const mentionedUserIds = newMsg.mentions || [];
 
-          // If message is for a different conversation, mark as unread and notify
-          if (msgConversationId !== currentConversationId) {
+          // Check if current user is mentioned
+          const isUserMentioned = mentionedUserIds.includes(user.id);
+
+          // If message is for a different conversation OR user is mentioned, mark as unread and notify
+          if (msgConversationId !== currentConversationId || isUserMentioned) {
             markUnreadDot(msgConversationId);
 
             // Fetch sender profile

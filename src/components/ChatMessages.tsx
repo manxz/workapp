@@ -3,6 +3,7 @@
 import { useEffect, useRef, memo, useState, useCallback } from "react";
 import { X, ArrowBendUpLeft, Stack } from "@phosphor-icons/react";
 import ThreadSummary from "./ThreadSummary";
+import MentionText from "./MentionText";
 import { formatTime, formatDateDivider, shouldShowDateDivider } from "@/lib/dateUtils";
 import { linkifyText } from "@/lib/textUtils";
 import { QUICK_REACTIONS, COLORS } from "@/lib/constants";
@@ -116,7 +117,10 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
                   {/* Message Text */}
                   {message.text && (
                     <p className="text-[13px] font-medium text-black opacity-90 leading-normal whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                      {linkifyText(message.text)}
+                      <MentionText 
+                        text={message.text} 
+                        currentUserId={currentUserId}
+                      />
                     </p>
                   )}
                   

@@ -329,6 +329,7 @@ export default function ChatApp({ channels, users, getPresence, hasUnreadDot, ma
               onTyping={broadcastTyping}
               onStopTyping={broadcastStopTyping}
               externalFiles={pendingFiles}
+              users={users.map(u => ({ id: u.id, name: u.name, avatar: u.avatar }))}
             />
             
             {/* Typing indicator */}
