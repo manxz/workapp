@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import NotepadSidebar from "@/components/NotepadSidebar";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import dynamic from "next/dynamic";
 import ListsView from "@/components/ListsView";
 import NewListModal from "@/components/NewListModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
 import { type List as ListType } from "@/hooks/useLists";
 import { useListItems } from "@/hooks/useListItems";
+import { useNotes, Note } from "@/hooks/useNotes";
+
+const NotepadSidebar = dynamic(() => import("@/components/NotepadSidebar"), { ssr: false });
+const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), { ssr: false });
 
 type List = {
   id: string;
@@ -24,8 +28,14 @@ interface NotepadAppProps {
 
 export default function NotepadApp({ lists: rawLists, createList, deleteList, refreshLists }: NotepadAppProps) {
   const [selectedListId, setSelectedListId] = useState<string | undefined>();
+  const [selectedNoteId, setSelectedNoteId] = useState<string | undefined>();
+  const [selectedType, setSelectedType] = useState<"list" | "note">("list");
   const [showNewListModal, setShowNewListModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDeleteNoteModal, setShowDeleteNoteModal] = useState(false);
+
+  // Notes hook
+  const { notes, loading: notesLoading, createNote, updateNote, deleteNote } = useNotes();
 
   // Fetch items for the selected list
   const {
@@ -62,15 +72,22 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
     });
   }, [rawLists, selectedListId, items, completedItems, itemsLoading]);
 
-  // Auto-select first list on load
+  // Auto-select first list or note on load
   useEffect(() => {
-    if (!selectedListId && lists.length > 0) {
-      setSelectedListId(lists[0].id);
+    if (!selectedListId && !selectedNoteId) {
+      if (lists.length > 0) {
+        setSelectedListId(lists[0].id);
+        setSelectedType("list");
+      } else if (notes.length > 0) {
+        setSelectedNoteId(notes[0].id);
+        setSelectedType("note");
+      }
     }
-  }, [lists, selectedListId]);
+  }, [lists, notes, selectedListId, selectedNoteId]);
 
-  // Find selected list
+  // Find selected list and note
   const selectedList = lists.find((list) => list.id === selectedListId);
+  const selectedNote = notes.find((note) => note.id === selectedNoteId);
 
   // Handle list creation
   const handleCreateList = async (name: string) => {
@@ -115,19 +132,109 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
     await updateItem(itemId, { content });
   };
 
-  // Show empty state if no lists
-  if (lists.length === 0) {
+  // Handle note creation
+  const handleCreateNote = async () => {
+    const newNote = await createNote();
+    if (newNote) {
+      setSelectedNoteId(newNote.id);
+      setSelectedType("note");
+    }
+  };
+
+  // Handle note selection
+  const handleSelectNote = (note: Note) => {
+    setSelectedNoteId(note.id);
+    setSelectedType("note");
+  };
+
+  // Handle list selection
+  const handleSelectList = (list: List) => {
+    setSelectedListId(list.id);
+    setSelectedType("list");
+  };
+
+  // Debounce timers
+  const contentDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const titleDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle note content change (auto-save with debounce)
+  const handleNoteContentChange = useCallback((content: string) => {
+    if (selectedNoteId) {
+      // Clear existing timer
+      if (contentDebounceTimer.current) {
+        clearTimeout(contentDebounceTimer.current);
+      }
+      // Set new timer (1 second debounce)
+      contentDebounceTimer.current = setTimeout(() => {
+        updateNote(selectedNoteId, { content });
+      }, 1000);
+    }
+  }, [selectedNoteId, updateNote]);
+
+  // Handle note title change (auto-save with debounce)
+  const handleNoteTitleChange = useCallback((title: string) => {
+    if (selectedNoteId) {
+      // Clear existing timer
+      if (titleDebounceTimer.current) {
+        clearTimeout(titleDebounceTimer.current);
+      }
+      // Set new timer (500ms debounce for title)
+      titleDebounceTimer.current = setTimeout(() => {
+        updateNote(selectedNoteId, { title });
+      }, 500);
+    }
+  }, [selectedNoteId, updateNote]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (contentDebounceTimer.current) {
+        clearTimeout(contentDebounceTimer.current);
+      }
+      if (titleDebounceTimer.current) {
+        clearTimeout(titleDebounceTimer.current);
+      }
+    };
+  }, []);
+
+  // Handle note deletion
+  const handleDeleteNote = async () => {
+    if (selectedNoteId) {
+      const success = await deleteNote(selectedNoteId);
+      if (success) {
+        // Select another note or list if available
+        const remainingNotes = notes.filter((note) => note.id !== selectedNoteId);
+        if (remainingNotes.length > 0) {
+          setSelectedNoteId(remainingNotes[0].id);
+          setSelectedType("note");
+        } else if (lists.length > 0) {
+          setSelectedListId(lists[0].id);
+          setSelectedType("list");
+        } else {
+          setSelectedNoteId(undefined);
+        }
+      }
+      setShowDeleteNoteModal(false);
+    }
+  };
+
+  // Show empty state if no lists and no notes
+  if (lists.length === 0 && notes.length === 0) {
     return (
       <>
         <NotepadSidebar
           lists={[]}
+          notes={[]}
+          notesLoading={notesLoading}
           selectedId={undefined}
           selectedType="list"
           onSelectList={() => {}}
+          onSelectNote={() => {}}
           onCreateList={() => setShowNewListModal(true)}
+          onCreateNote={handleCreateNote}
         />
         <div className="flex-1 flex items-center justify-center ml-[264px]">
-          <p className="text-sm font-medium text-neutral-500">No lists yet</p>
+          <p className="text-sm font-medium text-neutral-500">No lists or notes yet</p>
         </div>
         <NewListModal
           isOpen={showNewListModal}
@@ -142,14 +249,19 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
     <>
       <NotepadSidebar
         lists={lists}
-        selectedId={selectedListId}
-        selectedType="list"
-        onSelectList={(list) => setSelectedListId(list.id)}
+        notes={notes}
+        notesLoading={notesLoading}
+        selectedId={selectedType === "list" ? selectedListId : selectedNoteId}
+        selectedType={selectedType}
+        onSelectList={handleSelectList}
+        onSelectNote={handleSelectNote}
         onCreateList={() => setShowNewListModal(true)}
+        onCreateNote={handleCreateNote}
       />
 
       <div className="ml-[264px] flex-1">
-        {selectedList && (
+        {/* Lists View */}
+        {selectedType === "list" && selectedList && (
           <ListsView
             listName={selectedList.name}
             items={items}
@@ -159,6 +271,17 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
             onCreateItem={handleCreateItem}
             onUpdateItem={handleUpdateItem}
             onDeleteList={() => setShowDeleteModal(true)}
+          />
+        )}
+
+        {/* Notes View */}
+        {selectedType === "note" && selectedNote && (
+          <RichTextEditor
+            content={selectedNote.content}
+            title={selectedNote.title}
+            onContentChange={handleNoteContentChange}
+            onTitleChange={handleNoteTitleChange}
+            onDelete={() => setShowDeleteNoteModal(true)}
           />
         )}
       </div>
@@ -176,6 +299,16 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
         title={`Delete "${selectedList?.name}"?`}
         description="This will permanently delete the list and all its items. This action cannot be undone."
         confirmLabel="Delete list"
+        confirmVariant="danger"
+      />
+
+      <ConfirmationModal
+        isOpen={showDeleteNoteModal}
+        onClose={() => setShowDeleteNoteModal(false)}
+        onConfirm={handleDeleteNote}
+        title={`Delete "${selectedNote?.title}"?`}
+        description="This will permanently delete this note. This action cannot be undone."
+        confirmLabel="Delete note"
         confirmVariant="danger"
       />
     </>

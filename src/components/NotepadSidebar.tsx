@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Plus, CaretDown } from "@phosphor-icons/react";
 import ProgressIndicator from "./ProgressIndicator";
+import { Note } from "@/hooks/useNotes";
 
 type List = {
   id: string;
@@ -13,21 +14,72 @@ type List = {
 
 type NotepadSidebarProps = {
   lists: List[];
+  notes: Note[];
+  notesLoading?: boolean;
   selectedId?: string;
   selectedType?: "list" | "note";
   onSelectList?: (list: List) => void;
+  onSelectNote?: (note: Note) => void;
   onCreateList?: () => void;
+  onCreateNote?: () => void;
 };
+
+// Helper function to group notes by time period
+function groupNotesByTime(notes: Note[]) {
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const groups: Record<string, Note[]> = {
+    Yesterday: [],
+    'Previous 7 days': [],
+  };
+
+  notes.forEach((note) => {
+    const noteDate = new Date(note.updated_at);
+    const isToday = noteDate.toDateString() === now.toDateString();
+    const isYesterday = noteDate.toDateString() === yesterday.toDateString();
+    const isWithinSevenDays = noteDate >= sevenDaysAgo;
+
+    if (isYesterday) {
+      groups['Yesterday'].push(note);
+    } else if (isWithinSevenDays && !isToday) {
+      groups['Previous 7 days'].push(note);
+    }
+  });
+
+  return groups;
+}
 
 export default function NotepadSidebar({
   lists,
+  notes,
+  notesLoading = false,
   selectedId,
   selectedType,
   onSelectList,
+  onSelectNote,
   onCreateList,
+  onCreateNote,
 }: NotepadSidebarProps) {
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    Yesterday: true,
+    'Previous 7 days': true,
+  });
+
+  const groupedNotes = useMemo(() => groupNotesByTime(notes), [notes]);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
   return (
-    <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen w-[200px] py-4 fixed left-16 top-0">
+    <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen w-[200px] py-4 fixed left-16 top-0 overflow-y-auto">
       <div className="flex flex-col gap-2">
         {/* Header */}
         <div className="flex items-center justify-between pl-4 py-1.5 h-6">
@@ -90,27 +142,61 @@ export default function NotepadSidebar({
           </div>
         </div>
 
-        {/* Notes Section - Placeholder for future */}
-        <div className="flex flex-col w-full mt-2">
-          {/* Notes Header */}
+        {/* Notes Section - Simple, always visible */}
+        <div className="flex flex-col w-full">
           <div className="px-2 pr-2">
             <div className="flex items-center justify-between pl-2 pr-0 py-1.5">
               <div className="flex items-center gap-0.5">
                 <p className="text-[13px] font-semibold text-neutral-500">Notes</p>
-                <CaretDown size={16} className="text-neutral-500" weight="bold" />
               </div>
-              <button className="text-black hover:bg-neutral-200 rounded-md w-6 h-6 flex items-center justify-center transition-colors">
+              <button
+                onClick={onCreateNote}
+                className="text-black hover:bg-neutral-200 rounded-md w-6 h-6 flex items-center justify-center transition-colors"
+              >
                 <Plus size={16} weight="regular" />
               </button>
             </div>
           </div>
 
-          {/* Notes List - Coming soon */}
-          <div className="flex flex-col px-2">
-            <p className="text-[12px] text-neutral-400 px-2 py-1.5">
-              Coming soon
-            </p>
-          </div>
+          {/* Show all notes in a simple list */}
+          {notes.length > 0 && (
+            <div className="flex flex-col gap-2 px-2">
+              {notes.map((note) => (
+                <div key={note.id}>
+                  <div
+                    className={`border border-[rgba(29,29,31,0.1)] rounded-lg p-2 flex flex-col gap-1 cursor-pointer transition-colors ${
+                      selectedId === note.id && selectedType === "note"
+                        ? "bg-[#e0e0e0]"
+                        : "bg-[#fafafa] hover:bg-neutral-200"
+                    }`}
+                    onClick={() => onSelectNote?.(note)}
+                  >
+                    <p
+                      className={`text-[13px] text-[#1d1d1f] truncate ${
+                        selectedId === note.id && selectedType === "note"
+                          ? "font-semibold"
+                          : "font-medium"
+                      }`}
+                    >
+                      {note.title || 'New note'}
+                    </p>
+                    <div className="flex gap-2 items-start">
+                      <p className="text-[12px] font-medium text-[rgba(29,29,31,0.6)] whitespace-nowrap">
+                        {new Date(note.updated_at).toLocaleDateString('en-US', {
+                          month: '2-digit',
+                          day: '2-digit',
+                          year: '2-digit',
+                        })}
+                      </p>
+                      <p className="text-[12px] font-medium text-[rgba(29,29,31,0.4)] truncate flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                        {note.preview || 'No preview'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
