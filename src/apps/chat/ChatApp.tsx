@@ -12,6 +12,8 @@ import TypingIndicator from "@/components/TypingIndicator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/hooks/useChat";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { markChatMounted, markChatUnmounted } from "@/global/chatVisibility";
+import { clearUnreadCount } from "@/global/tabTitle";
 import type { UserPresence } from "@/hooks/usePresence";
 import type { Channel } from "@/hooks/useChannels";
 import type { User } from "@/hooks/useUsers";
@@ -20,6 +22,9 @@ interface ChatAppProps {
   channels: Channel[];
   users: User[];
   getPresence: (userId: string) => UserPresence;
+  hasUnreadDot: (conversationId: string) => boolean;
+  markReadDot: (conversationId: string) => void;
+  onConversationChange: (conversationId: string | null) => void;
 }
 
 /**
@@ -37,13 +42,41 @@ interface ChatAppProps {
  * This is extracted from the main page.tsx for code splitting.
  * Receives channels and users as props (lifted to page.tsx) to prevent refetching on app switch.
  */
-export default function ChatApp({ channels, users, getPresence }: ChatAppProps) {
+export default function ChatApp({ channels, users, getPresence, hasUnreadDot, markReadDot, onConversationChange }: ChatAppProps) {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const threadIdFromUrl = searchParams.get("thread");
 
   const { hasUnread, markAsRead } = useUnreadMessages();
+
+  // Track chat app mount/unmount for notification logic
+  useEffect(() => {
+    markChatMounted();
+    
+    return () => {
+      markChatUnmounted();
+      onConversationChange(null); // Clear current conversation when leaving chat
+    };
+  }, [onConversationChange]);
+
+  // Clear unread count when chat app is focused
+  useEffect(() => {
+    const handleFocus = () => {
+      clearUnreadCount();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    // Also clear on mount if chat is already focused
+    if (document.hasFocus()) {
+      clearUnreadCount();
+    }
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   // Restore last conversation from localStorage
   const [selectedChat, setSelectedChat] = useState<{ id: string; name: string; avatar?: string } | null>(() => {
@@ -221,24 +254,30 @@ export default function ChatApp({ channels, users, getPresence }: ChatAppProps) 
       <ChatSidebar
         channels={channels.map(c => ({ 
           ...c, 
-          hasUnread: hasUnread(`channel-${c.id}`) 
+          hasUnread: hasUnreadDot(`channel-${c.id}`) 
         }))}
         directMessages={users.map(u => ({ 
           ...u, 
-          hasUnread: user ? hasUnread([user.id, u.id].sort().join("-")) : false,
+          hasUnread: user ? hasUnreadDot([user.id, u.id].sort().join("-")) : false,
           userId: u.id, // Add userId for presence tracking
         }))}
         selectedId={selectedChat?.id}
         selectedType={selectedType}
         getPresence={getPresence}
         onSelectChannel={(channel) => {
-          markAsRead(`channel-${channel.id}`);
+          const convId = `channel-${channel.id}`;
+          markAsRead(convId);
+          markReadDot(convId);
           setSelectedChat({ id: channel.id, name: channel.name });
           setSelectedType("channel");
+          onConversationChange(convId); // Notify parent
         }}
         onSelectChat={(dm) => {
           if (user) {
-            markAsRead([user.id, dm.id].sort().join("-"));
+            const dmConversationId = [user.id, dm.id].sort().join("-");
+            markAsRead(dmConversationId);
+            markReadDot(dmConversationId);
+            onConversationChange(dmConversationId); // Notify parent
           }
           setSelectedChat({ id: dm.id, name: dm.name, avatar: dm.avatar });
           setSelectedType("dm");

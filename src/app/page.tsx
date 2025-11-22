@@ -14,8 +14,12 @@ import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
 import { useLists } from "@/hooks/useLists";
 import { usePresence } from "@/hooks/usePresence";
+import { useGlobalMessageListener } from "@/hooks/useGlobalMessageListener";
+import { useUnreadDots } from "@/hooks/useUnreadDots";
 import { AppProvider, AppCommunication } from "@/apps/AppContext";
 import { AVAILABLE_APPS } from "@/apps/registry";
+import { setupNotificationSound } from "@/global/notificationSound";
+import { setOriginalTitle, clearUnreadCount } from "@/global/tabTitle";
 
 // Dynamically import apps for code splitting
 const ChatApp = dynamic(() => import("@/apps/chat/ChatApp"), {
@@ -51,14 +55,40 @@ function HomeContent() {
   // Initialize presence tracking globally (stays active across all apps)
   const { getPresence } = usePresence();
   
-  // Update browser tab title with unread count
+  // Initialize unread dots (ephemeral state)
+  const { hasUnread: hasUnreadDot, hasAnyUnread, markUnread: markUnreadDot, markRead: markReadDot } = useUnreadDots();
+  
+  // Track current conversation ID for the global message listener
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  
+  // Initialize notification systems on mount
   useEffect(() => {
-    if (unreadCount > 0) {
-      document.title = `(${unreadCount}) Workapp`;
-    } else {
-      document.title = "Workapp";
+    setupNotificationSound();
+    setOriginalTitle("Workapp");
+  }, []);
+  
+  // Clear unread count when window is focused
+  useEffect(() => {
+    const handleFocus = () => {
+      clearUnreadCount();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    // Also clear on mount if window is already focused
+    if (document.hasFocus()) {
+      clearUnreadCount();
     }
-  }, [unreadCount]);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+  
+  // Global message listener (stays active across all apps)
+  useGlobalMessageListener(currentConversationId, markUnreadDot);
+  
+  // Note: Tab title is now managed by src/global/tabTitle.ts
   
   // Initialize active view from localStorage
   const [activeView, setActiveView] = useState<"chat" | "projects" | "notes" | "apps">(() => {
@@ -150,13 +180,22 @@ function HomeContent() {
         <Sidebar
           activeView={activeView}
           onViewChange={setActiveView}
-          hasUnreadMessages={unreadCount > 0}
+          hasUnreadMessages={hasAnyUnread()}
           enabledApps={isAppEnabled}
           appsLoading={appsLoading}
         />
 
         {/* Render Active App */}
-        {activeView === "chat" && <ChatApp channels={channels} users={users} getPresence={getPresence} />}
+        {activeView === "chat" && (
+          <ChatApp 
+            channels={channels} 
+            users={users} 
+            getPresence={getPresence}
+            hasUnreadDot={hasUnreadDot}
+            markReadDot={markReadDot}
+            onConversationChange={setCurrentConversationId}
+          />
+        )}
         {activeView === "projects" && (
           <ProjectsApp
             projects={projects}

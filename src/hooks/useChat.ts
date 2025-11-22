@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { showMessageNotification, requestNotificationPermission } from "@/lib/notifications";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import {
   TYPING_INDICATOR_TIMEOUT,
@@ -105,11 +106,7 @@ export function useChat(conversationId: string) {
 
   // Request notification permission on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-    }
+    requestNotificationPermission();
   }, []);
 
   /**
@@ -433,29 +430,20 @@ export function useChat(conversationId: string) {
           
           // Show browser notification if message is from someone else
           if (user && (newMsg.author_id as string) !== user.id) {
-            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              // Always show notification for new messages (regardless of tab visibility)
-              try {
-                const notification = new Notification(formattedMessage.author, {
-                  body: formattedMessage.text,
-                  icon: formattedMessage.avatar,
-                  tag: conversationId,
-                  requireInteraction: false,
-                });
-                
-                // Focus window when notification is clicked
-                notification.onclick = () => {
-                  window.focus();
-                  notification.close();
-                };
-                
-                notification.onerror = (error) => {
-                  console.error("Notification error:", error);
-                };
-              } catch (error) {
-                console.error("Error creating notification:", error);
+            showMessageNotification(
+              {
+                conversationId,
+                senderId: newMsg.author_id as string,
+                senderName: formattedMessage.author,
+                senderAvatar: formattedMessage.avatar,
+                messageText: formattedMessage.text,
+              },
+              () => {
+                // Notification clicked - navigate to this conversation if needed
+                // (The ChatApp component handles conversation selection)
+                console.log('[useChat] Notification clicked for conversation:', conversationId);
               }
-            }
+            );
           }
           
           setMessages((prev) => {

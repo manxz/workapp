@@ -80,7 +80,7 @@ export default function ChatSidebar({
                 </p>
               </div>
               {channel.hasUnread && (
-                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full" />
+                <div className="w-1.5 h-1.5 bg-[#FF6663] rounded-full" />
               )}
             </button>
           ))}
@@ -149,7 +149,7 @@ export default function ChatSidebar({
                 </p>
               </div>
               {dm.hasUnread && (
-                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full" />
+                <div className="w-1.5 h-1.5 bg-[#FF6663] rounded-full" />
               )}
             </button>
           ))}

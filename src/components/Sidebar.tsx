@@ -50,7 +50,16 @@ export default function Sidebar({
               />
               {/* Notification dot - only shows when there are unread messages */}
               {hasUnreadMessages && (
-                <div className="absolute top-2 left-5 w-1.5 h-1.5 bg-blue-600 rounded-full border border-neutral-200" />
+                <div 
+                  className={`absolute top-2 left-5 w-1.5 h-1.5 rounded-full ${
+                    activeView === "chat" 
+                      ? "[box-shadow:0_0_0_1.5px_#e5e5e5]" 
+                      : "[box-shadow:0_0_0_1.5px_#FAFAFA] group-hover:[box-shadow:0_0_0_1.5px_#e5e5e5]"
+                  }`}
+                  style={{ 
+                    backgroundColor: '#FF6663',
+                  }} 
+                />
               )}
               {/* Tooltip */}
               <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
