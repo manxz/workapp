@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { Plus, CaretDown } from "@phosphor-icons/react";
 import ProgressIndicator from "./ProgressIndicator";
 import { Note } from "@/hooks/useNotes";
@@ -53,7 +53,79 @@ function groupNotesByTime(notes: Note[]) {
   return groups;
 }
 
-export default function NotepadSidebar({
+// Memoize individual list item component
+const ListItem = memo(({ 
+  list, 
+  isSelected, 
+  onSelect 
+}: { 
+  list: List; 
+  isSelected: boolean; 
+  onSelect: (list: List) => void;
+}) => (
+  <div className="relative group">
+    <div
+      className={`flex items-center justify-between w-full px-2 py-1.5 rounded-[7px] transition-colors cursor-pointer ${
+        isSelected ? "bg-neutral-200" : "hover:bg-neutral-200"
+      }`}
+      onClick={() => onSelect(list)}
+    >
+      <p className={`text-[13px] text-black ${isSelected ? "font-semibold" : "font-medium"}`}>
+        {list.name}
+      </p>
+      <div className="flex items-center gap-[2px]">
+        <span className="text-[12px] font-medium text-neutral-500">
+          {list.completed}/{list.total}
+        </span>
+        <ProgressIndicator
+          completed={list.completed}
+          total={list.total}
+          size="small"
+        />
+      </div>
+    </div>
+  </div>
+));
+ListItem.displayName = 'ListItem';
+
+// Memoize individual note card component
+const NoteCard = memo(({ 
+  note, 
+  isSelected, 
+  onSelect 
+}: { 
+  note: Note; 
+  isSelected: boolean; 
+  onSelect: (note: Note) => void;
+}) => (
+  <div className="relative group">
+    <div
+      className={`border border-[rgba(29,29,31,0.1)] rounded-lg p-2 flex flex-col cursor-pointer transition-colors ${
+        isSelected ? "bg-[#e0e0e0]" : "bg-[#fafafa] hover:bg-neutral-200"
+      }`}
+      onClick={() => onSelect(note)}
+    >
+      <p className="text-[13px] text-[#1d1d1f] font-semibold truncate">
+        {note.title || 'New note'}
+      </p>
+      <div className="flex gap-2 items-start">
+        <p className="text-[12px] font-medium text-[rgba(29,29,31,0.6)] whitespace-nowrap">
+          {new Date(note.updated_at).toLocaleDateString('en-US', {
+            month: '2-digit',
+            day: '2-digit',
+            year: '2-digit',
+          })}
+        </p>
+        <p className="text-[12px] font-medium text-[rgba(29,29,31,0.4)] truncate flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+          {note.preview || 'No preview'}
+        </p>
+      </div>
+    </div>
+  </div>
+));
+NoteCard.displayName = 'NoteCard';
+
+function NotepadSidebar({
   lists,
   notes,
   notesLoading = false,
@@ -71,12 +143,12 @@ export default function NotepadSidebar({
 
   const groupedNotes = useMemo(() => groupNotesByTime(notes), [notes]);
 
-  const toggleSection = (section: string) => {
+  const toggleSection = useCallback((section: string) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
-  };
+  }, []);
 
   return (
     <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen w-[200px] py-4 fixed left-16 top-0 overflow-y-auto">
@@ -107,37 +179,12 @@ export default function NotepadSidebar({
           {/* Lists */}
           <div className="flex flex-col px-2">
           {lists.map((list) => (
-            <div key={list.id} className="relative group">
-              <div
-                className={`flex items-center justify-between w-full px-2 py-1.5 rounded-[7px] transition-colors cursor-pointer ${
-                  selectedId === list.id && selectedType === "list"
-                    ? "bg-neutral-200"
-                    : "hover:bg-neutral-200"
-                }`}
-                onClick={() => onSelectList?.(list)}
-              >
-                <p
-                  className={`text-[13px] text-black ${
-                    selectedId === list.id && selectedType === "list"
-                      ? "font-semibold"
-                      : "font-medium"
-                  }`}
-                >
-                  {list.name}
-                </p>
-
-                <div className="flex items-center gap-[2px]">
-                  <span className="text-[12px] font-medium text-neutral-500">
-                    {list.completed}/{list.total}
-                  </span>
-                  <ProgressIndicator
-                    completed={list.completed}
-                    total={list.total}
-                    size="small"
-                  />
-                </div>
-              </div>
-            </div>
+            <ListItem
+              key={list.id}
+              list={list}
+              isSelected={selectedId === list.id && selectedType === "list"}
+              onSelect={onSelectList!}
+            />
           ))}
           </div>
         </div>
@@ -162,38 +209,12 @@ export default function NotepadSidebar({
           {notes.length > 0 && (
             <div className="flex flex-col gap-2 px-2">
               {notes.map((note) => (
-                <div key={note.id}>
-                  <div
-                    className={`border border-[rgba(29,29,31,0.1)] rounded-lg p-2 flex flex-col gap-1 cursor-pointer transition-colors ${
-                      selectedId === note.id && selectedType === "note"
-                        ? "bg-[#e0e0e0]"
-                        : "bg-[#fafafa] hover:bg-neutral-200"
-                    }`}
-                    onClick={() => onSelectNote?.(note)}
-                  >
-                    <p
-                      className={`text-[13px] text-[#1d1d1f] truncate ${
-                        selectedId === note.id && selectedType === "note"
-                          ? "font-semibold"
-                          : "font-medium"
-                      }`}
-                    >
-                      {note.title || 'New note'}
-                    </p>
-                    <div className="flex gap-2 items-start">
-                      <p className="text-[12px] font-medium text-[rgba(29,29,31,0.6)] whitespace-nowrap">
-                        {new Date(note.updated_at).toLocaleDateString('en-US', {
-                          month: '2-digit',
-                          day: '2-digit',
-                          year: '2-digit',
-                        })}
-                      </p>
-                      <p className="text-[12px] font-medium text-[rgba(29,29,31,0.4)] truncate flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-                        {note.preview || 'No preview'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <NoteCard
+                  key={note.id}
+                  note={note}
+                  isSelected={selectedId === note.id && selectedType === "note"}
+                  onSelect={onSelectNote!}
+                />
               ))}
             </div>
           )}
@@ -203,3 +224,4 @@ export default function NotepadSidebar({
   );
 }
 
+export default memo(NotepadSidebar);

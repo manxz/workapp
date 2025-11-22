@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import TextAlign from '@tiptap/extension-text-align';
@@ -30,6 +30,15 @@ interface RichTextEditorProps {
   onDelete: () => void;
 }
 
+// Memoize highlight colors array to prevent recreation on every render
+const HIGHLIGHT_COLORS = [
+  { name: 'Yellow', color: '#FFE085' },
+  { name: 'Green', color: '#A7F3D0' },
+  { name: 'Blue', color: '#BAE6FD' },
+  { name: 'Pink', color: '#FBCFE8' },
+  { name: 'Purple', color: '#DDD6FE' },
+] as const;
+
 export default function RichTextEditor({
   content,
   title,
@@ -42,14 +51,6 @@ export default function RichTextEditor({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#FFE085');
   const titleInputRef = useRef<HTMLInputElement>(null);
-
-  const highlightColors = [
-    { name: 'Yellow', color: '#FFE085' },
-    { name: 'Green', color: '#A7F3D0' },
-    { name: 'Blue', color: '#BAE6FD' },
-    { name: 'Pink', color: '#FBCFE8' },
-    { name: 'Purple', color: '#DDD6FE' },
-  ];
   const [, forceUpdate] = useState({});
 
   const editor = useEditor({
@@ -105,11 +106,23 @@ export default function RichTextEditor({
     }
   }, [title]);
 
-  // Handle title change with local state
-  const handleTitleChange = (newTitle: string) => {
+  // Memoize title change handler to prevent recreation
+  const handleTitleChange = useCallback((newTitle: string) => {
     setLocalTitle(newTitle);
     onTitleChange(newTitle);
-  };
+  }, [onTitleChange]);
+
+  // Memoize color picker toggle
+  const toggleColorPicker = useCallback(() => {
+    setShowColorPicker(prev => !prev);
+  }, []);
+
+  // Memoize color selection handler
+  const handleColorSelect = useCallback((color: string) => {
+    setSelectedColor(color);
+    editor?.chain().focus().toggleHighlight({ color }).run();
+    setShowColorPicker(false);
+  }, [editor]);
 
   if (!editor) {
     return null;
@@ -137,7 +150,7 @@ export default function RichTextEditor({
             {/* Highlighter + Color */}
             <div className="border border-[rgba(29,29,31,0.1)] rounded-lg relative">
               <button
-                onClick={() => setShowColorPicker(!showColorPicker)}
+                onClick={toggleColorPicker}
                 className="flex items-center gap-1 p-2 hover:bg-neutral-200 transition-colors w-full overflow-hidden rounded-lg"
               >
                 <Highlighter size={16} weight="regular" />
@@ -147,14 +160,10 @@ export default function RichTextEditor({
               {/* Color Picker Dropdown */}
               {showColorPicker && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-[rgba(29,29,31,0.1)] rounded-lg shadow-lg p-2 flex gap-1 z-50">
-                  {highlightColors.map((item) => (
+                  {HIGHLIGHT_COLORS.map((item) => (
                     <button
                       key={item.color}
-                      onClick={() => {
-                        setSelectedColor(item.color);
-                        editor.chain().focus().toggleHighlight({ color: item.color }).run();
-                        setShowColorPicker(false);
-                      }}
+                      onClick={() => handleColorSelect(item.color)}
                       className={`w-4 h-4 rounded-full border-2 hover:scale-110 transition-transform ${
                         selectedColor === item.color ? 'border-black' : 'border-transparent'
                       }`}
