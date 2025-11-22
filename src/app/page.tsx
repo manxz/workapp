@@ -13,6 +13,7 @@ import { useUsers } from "@/hooks/useUsers";
 import { useProjects } from "@/hooks/useProjects";
 import { useTasks } from "@/hooks/useTasks";
 import { useLists } from "@/hooks/useLists";
+import { usePresence } from "@/hooks/usePresence";
 import { AppProvider, AppCommunication } from "@/apps/AppContext";
 import { AVAILABLE_APPS } from "@/apps/registry";
 
@@ -46,6 +47,9 @@ function HomeContent() {
   const { projects, createProject, deleteProject, loading: projectsLoading } = useProjects();
   const { tasks, createTask, updateTask, deleteTask, loading: tasksLoading } = useTasks();
   const { lists, createList, deleteList, refreshLists, loading: listsLoading } = useLists();
+  
+  // Initialize presence tracking globally (stays active across all apps)
+  const { getPresence } = usePresence();
   
   // Update browser tab title with unread count
   useEffect(() => {
@@ -152,7 +156,7 @@ function HomeContent() {
         />
 
         {/* Render Active App */}
-        {activeView === "chat" && <ChatApp channels={channels} users={users} />}
+        {activeView === "chat" && <ChatApp channels={channels} users={users} getPresence={getPresence} />}
         {activeView === "projects" && (
           <ProjectsApp
             projects={projects}

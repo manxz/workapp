@@ -12,13 +12,14 @@ import TypingIndicator from "@/components/TypingIndicator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/hooks/useChat";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-import { usePresence } from "@/hooks/usePresence";
+import type { UserPresence } from "@/hooks/usePresence";
 import type { Channel } from "@/hooks/useChannels";
 import type { User } from "@/hooks/useUsers";
 
 interface ChatAppProps {
   channels: Channel[];
   users: User[];
+  getPresence: (userId: string) => UserPresence;
 }
 
 /**
@@ -36,14 +37,13 @@ interface ChatAppProps {
  * This is extracted from the main page.tsx for code splitting.
  * Receives channels and users as props (lifted to page.tsx) to prevent refetching on app switch.
  */
-export default function ChatApp({ channels, users }: ChatAppProps) {
+export default function ChatApp({ channels, users, getPresence }: ChatAppProps) {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const threadIdFromUrl = searchParams.get("thread");
 
   const { hasUnread, markAsRead } = useUnreadMessages();
-  const { getPresence } = usePresence();
 
   // Restore last conversation from localStorage
   const [selectedChat, setSelectedChat] = useState<{ id: string; name: string; avatar?: string } | null>(() => {
