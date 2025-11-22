@@ -35,6 +35,31 @@ export default function MentionInput({
     return editorRef.current.innerText || "";
   }, []);
 
+  const getFormattedMessage = useCallback(() => {
+    if (!editorRef.current) return "";
+    
+    let formattedMessage = "";
+    
+    // Walk through all child nodes and convert mentions
+    editorRef.current.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        formattedMessage += node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        // Check if it's a mention span
+        if (element.hasAttribute('data-mention-id')) {
+          const userId = element.getAttribute('data-mention-id');
+          const userName = element.getAttribute('data-mention-name');
+          formattedMessage += `@[${userId}:${userName}]`;
+        } else {
+          formattedMessage += element.innerText;
+        }
+      }
+    });
+    
+    return formattedMessage;
+  }, []);
+
   const handleInput = useCallback(() => {
     const text = getTextContent();
     
@@ -71,16 +96,17 @@ export default function MentionInput({
   }, [getTextContent, onTyping, onStopTyping]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Don't send message if mention picker is open - let picker handle Enter/Tab
+    if (showMentionPicker && (e.key === "Enter" || e.key === "Tab")) {
+      return;
+    }
+    
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const text = getTextContent();
       if (text.trim()) {
-        // Convert mentions to storage format
-        let formattedMessage = text;
-        Object.entries(mentionMapRef.current).forEach(([userName, userId]) => {
-          const mentionRegex = new RegExp(`${userName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\s|$)`, 'g');
-          formattedMessage = formattedMessage.replace(mentionRegex, `@[${userId}:${userName}]`);
-        });
+        // Get formatted message with mentions converted to storage format
+        const formattedMessage = getFormattedMessage();
         
         onSendMessage?.(formattedMessage);
         
@@ -92,7 +118,7 @@ export default function MentionInput({
         onStopTyping?.();
       }
     }
-  }, [getTextContent, onSendMessage, onStopTyping]);
+  }, [showMentionPicker, getTextContent, getFormattedMessage, onSendMessage, onStopTyping]);
 
   const handleMentionSelect = useCallback((user: User) => {
     if (!editorRef.current) return;
