@@ -35,8 +35,8 @@ export default function NotificationPrompt() {
   if (!show) return null;
 
   return (
-    <div className="px-2">
-      <div className="bg-[#fafafa] border border-[rgba(29,29,31,0.1)] rounded-xl p-4 flex flex-col gap-4">
+    <div className="px-2 relative z-50">
+      <div className="bg-[#fafafa] border border-[rgba(29,29,31,0.1)] rounded-xl p-4 flex flex-col gap-4 relative">
         {/* Icon and Text */}
         <div className="flex flex-col gap-1">
           <Bell size={16} weight="fill" className="text-black" />
@@ -48,7 +48,8 @@ export default function NotificationPrompt() {
         {/* Button */}
         <button
           onClick={handleEnableNotifications}
-          className="bg-black text-white text-xs font-medium py-1.5 px-2 rounded-[7px] hover:bg-neutral-800 transition-colors w-full h-6 flex items-center justify-center"
+          className="bg-black text-white text-xs font-medium py-1.5 px-2 rounded-[7px] hover:bg-neutral-800 transition-colors w-full h-6 flex items-center justify-center relative z-50 cursor-pointer"
+          type="button"
         >
           Enable notifications
         </button>

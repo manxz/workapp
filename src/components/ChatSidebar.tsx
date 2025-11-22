@@ -14,6 +14,7 @@ type DirectMessage = {
   name: string;
   avatar: string;
   hasUnread: boolean;
+  userId: string; // User ID for presence tracking
 };
 
 type ChatSidebarProps = {
@@ -23,6 +24,7 @@ type ChatSidebarProps = {
   selectedType?: "channel" | "dm";
   onSelectChannel?: (channel: Channel) => void;
   onSelectChat?: (dm: DirectMessage) => void;
+  getPresence: (userId: string) => { online: boolean; lastActiveAt: number };
 };
 
 export default function ChatSidebar({
@@ -32,6 +34,7 @@ export default function ChatSidebar({
   selectedType,
   onSelectChannel,
   onSelectChat,
+  getPresence,
 }: ChatSidebarProps) {
   return (
     <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col justify-between h-screen w-[200px] py-4 fixed left-16 top-0">
@@ -114,11 +117,33 @@ export default function ChatSidebar({
                 }`}
             >
               <div className="flex items-center gap-1.5">
-                <img
-                  src={dm.avatar}
-                  alt={dm.name}
-                  className="w-[18px] h-[18px] rounded-full object-cover"
-                />
+                {/* Avatar with presence indicator */}
+                <div className="relative inline-grid grid-cols-[max-content] grid-rows-[max-content] leading-[0]">
+                  <img
+                    src={dm.avatar}
+                    alt={dm.name}
+                    className="w-[18px] h-[18px] rounded-full object-cover col-start-1 row-start-1"
+                  />
+                  {/* Presence indicator */}
+                  {(() => {
+                    const presence = getPresence(dm.userId);
+                    const isOnline = presence.online;
+                    
+                    return (
+                      <div
+                        className={`w-[6px] h-[6px] rounded-full col-start-1 row-start-1 ml-[12px] mt-[12px] ${
+                          isOnline
+                            ? 'bg-[#34C759]' // Green for online
+                            : 'bg-[#FAFAFA] border border-[#8E8E93]' // Light gray with border for offline
+                        }`}
+                        style={{ 
+                          gridArea: '1 / 1',
+                          boxShadow: '0 0 0 1px #FAFAFA' // White outer stroke
+                        }}
+                      />
+                    );
+                  })()}
+                </div>
                 <p className={`text-[13px] text-black ${dm.hasUnread ? 'font-semibold' : 'font-medium'}`}>
                   {dm.name}
                 </p>

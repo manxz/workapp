@@ -12,6 +12,7 @@ import TypingIndicator from "@/components/TypingIndicator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useChat } from "@/hooks/useChat";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { usePresence } from "@/hooks/usePresence";
 import type { Channel } from "@/hooks/useChannels";
 import type { User } from "@/hooks/useUsers";
 
@@ -42,6 +43,7 @@ export default function ChatApp({ channels, users }: ChatAppProps) {
   const threadIdFromUrl = searchParams.get("thread");
 
   const { hasUnread, markAsRead } = useUnreadMessages();
+  const { getPresence } = usePresence();
 
   // Restore last conversation from localStorage
   const [selectedChat, setSelectedChat] = useState<{ id: string; name: string; avatar?: string } | null>(() => {
@@ -223,10 +225,12 @@ export default function ChatApp({ channels, users }: ChatAppProps) {
         }))}
         directMessages={users.map(u => ({ 
           ...u, 
-          hasUnread: user ? hasUnread([user.id, u.id].sort().join("-")) : false
+          hasUnread: user ? hasUnread([user.id, u.id].sort().join("-")) : false,
+          userId: u.id, // Add userId for presence tracking
         }))}
         selectedId={selectedChat?.id}
         selectedType={selectedType}
+        getPresence={getPresence}
         onSelectChannel={(channel) => {
           markAsRead(`channel-${channel.id}`);
           setSelectedChat({ id: channel.id, name: channel.name });

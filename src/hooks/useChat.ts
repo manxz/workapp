@@ -434,30 +434,26 @@ export function useChat(conversationId: string) {
           // Show browser notification if message is from someone else
           if (user && (newMsg.author_id as string) !== user.id) {
             if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-              // Show notification if tab is hidden or window doesn't have focus
-              const shouldNotify = document.visibilityState === 'hidden' || !document.hasFocus();
-              
-              if (shouldNotify) {
-                try {
-                  const notification = new Notification(formattedMessage.author, {
-                    body: formattedMessage.text,
-                    icon: formattedMessage.avatar,
-                    tag: conversationId,
-                    requireInteraction: false,
-                  });
-                  
-                  // Focus window when notification is clicked
-                  notification.onclick = () => {
-                    window.focus();
-                    notification.close();
-                  };
-                  
-                  notification.onerror = (error) => {
-                    console.error("Notification error:", error);
-                  };
-                } catch (error) {
-                  console.error("Error creating notification:", error);
-                }
+              // Always show notification for new messages (regardless of tab visibility)
+              try {
+                const notification = new Notification(formattedMessage.author, {
+                  body: formattedMessage.text,
+                  icon: formattedMessage.avatar,
+                  tag: conversationId,
+                  requireInteraction: false,
+                });
+                
+                // Focus window when notification is clicked
+                notification.onclick = () => {
+                  window.focus();
+                  notification.close();
+                };
+                
+                notification.onerror = (error) => {
+                  console.error("Notification error:", error);
+                };
+              } catch (error) {
+                console.error("Error creating notification:", error);
               }
             }
           }
