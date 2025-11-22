@@ -124,10 +124,10 @@ export function usePresence() {
           const presences = state[userId];
           if (presences && presences.length > 0) {
             // Take the most recent presence entry
-            const latest = presences[0] as { online: boolean; lastActiveAt: number; user_id: string };
+            const latest = presences[0] as any;
             newMap.set(userId, {
-              online: latest.online,
-              lastActiveAt: latest.lastActiveAt,
+              online: latest.online ?? false,
+              lastActiveAt: latest.lastActiveAt ?? Date.now(),
             });
           }
         });
