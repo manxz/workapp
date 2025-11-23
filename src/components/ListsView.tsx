@@ -138,8 +138,9 @@ export default function ListsView({
     setEditingNotes(item.notes || "");
   };
 
-  const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>, itemId: string) => {
-    if (e.key === "Enter") {
+  const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, itemId: string) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent default only for Enter without Shift
       if (editingText.trim()) {
         onUpdateItem(itemId, { content: editingText.trim(), notes: editingNotes.trim() });
       }
@@ -347,14 +348,14 @@ export default function ListsView({
                 </div>
                 {/* Notes input when editing */}
                 <div className="pl-[21px]">
-                  <input
-                    type="text"
+                  <textarea
                     value={editingNotes}
                     onChange={(e) => setEditingNotes(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                     onBlur={(e) => handleEditBlur(item.id, e)}
                     placeholder="Notes"
-                    className="w-full text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal]"
+                    rows={1}
+                    className="w-full text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none"
                   />
                 </div>
               </div>
