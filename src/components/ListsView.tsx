@@ -328,7 +328,7 @@ export default function ListsView({
               // Editing mode - checkbox inside container with adjusted padding
               <div 
                 ref={editingContainerRef}
-                className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+                className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex items-center gap-2">
                   <Checkbox
