@@ -74,6 +74,14 @@ export default function ListsView({
     }
   };
 
+  const handleNewItemBlur = () => {
+    if (newItemText.trim()) {
+      onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
+      setNewItemText("");
+      setNewItemNotes("");
+    }
+  };
+
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const pastedText = e.clipboardData.getData('text');
     
@@ -287,6 +295,7 @@ export default function ListsView({
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
               onKeyDown={handleKeyDown}
+              onBlur={handleNewItemBlur}
               onPaste={handlePaste}
               placeholder="New list item"
               className="flex-1 text-[13px] font-medium text-black placeholder:text-[#B0B0B0] outline-none bg-transparent"
@@ -299,6 +308,7 @@ export default function ListsView({
               value={newItemNotes}
               onChange={(e) => setNewItemNotes(e.target.value)}
               onKeyDown={handleKeyDown}
+              onBlur={handleNewItemBlur}
               placeholder="Notes"
               className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
             />
