@@ -412,8 +412,9 @@ export default function ListsView({
                       onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                       onBlur={(e) => handleEditBlur(item.id, e)}
                       placeholder="Notes"
-                      rows={1}
-                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none whitespace-pre-wrap break-words overflow-hidden"
+                      wrap="soft"
+                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none overflow-wrap-anywhere"
+                      style={{ minHeight: '20px', height: 'auto', overflowY: 'hidden' }}
                     />
                   </div>
                 </div>
@@ -494,8 +495,9 @@ export default function ListsView({
                       onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                       onBlur={(e) => handleEditBlur(item.id, e)}
                       placeholder="Notes"
-                      rows={1}
-                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none whitespace-pre-wrap break-words overflow-hidden"
+                      wrap="soft"
+                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none overflow-wrap-anywhere"
+                      style={{ minHeight: '20px', height: 'auto', overflowY: 'hidden' }}
                     />
                   </div>
                 </div>
