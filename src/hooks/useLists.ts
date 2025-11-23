@@ -10,6 +10,7 @@ export type List = {
   updated_at: string;
   completed_count?: number;
   total_count?: number;
+  isShared?: boolean; // New: indicates if list has collaborators
 };
 
 /**
@@ -48,7 +49,7 @@ export function useLists() {
       if (error) {
         console.error('Error fetching lists:', error);
       } else if (data) {
-        // Transform data to include counts
+        // Transform data to include counts and shared status
         const listsWithCounts = data.map((list: any) => ({
           id: list.id,
           name: list.name,
@@ -57,6 +58,7 @@ export function useLists() {
           updated_at: list.updated_at,
           total_count: list.list_items?.length || 0,
           completed_count: list.list_items?.filter((item: any) => item.completed).length || 0,
+          isShared: false, // Temporary: will be populated after migration
         }));
         setLists(listsWithCounts);
       }

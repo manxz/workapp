@@ -10,6 +10,7 @@ type List = {
   name: string;
   completed: number;
   total: number;
+  isShared?: boolean; // New: indicates if list has collaborators
 };
 
 type NotepadSidebarProps = {
@@ -70,9 +71,18 @@ const ListItem = memo(({
       }`}
       onClick={() => onSelect(list)}
     >
-      <p className={`text-[13px] text-black ${isSelected ? "font-semibold" : "font-medium"}`}>
-        {list.name}
-      </p>
+      <div className="flex items-center gap-0.5">
+        <p className={`text-[13px] text-black ${isSelected ? "font-semibold" : "font-medium"}`}>
+          {list.name}
+        </p>
+        {list.isShared && (
+          <div className="bg-[#f5f5f5] border border-[rgba(29,29,31,0.1)] px-1 py-0.5 rounded-[5px]">
+            <p className="text-[10px] font-medium text-black tracking-[0.025px]">
+              Shared
+            </p>
+          </div>
+        )}
+      </div>
       <div className="flex items-center gap-[2px]">
         <span className="text-[12px] font-medium text-neutral-500">
           {list.completed}/{list.total}
