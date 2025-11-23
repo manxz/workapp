@@ -41,15 +41,15 @@ body {
   animation: slide-in 0.2s ease-out;
 }
 
-/* List item editing container scale-in animation */
+/* List item editing container slide-down animation */
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.98);
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 }
 
