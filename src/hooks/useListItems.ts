@@ -79,8 +79,6 @@ export function useListItems(listId?: string) {
   useEffect(() => {
     if (!user || !listId) return;
 
-    console.log('[useListItems] Setting up real-time subscription for list:', listId);
-
     const channel = supabase
       .channel(`list_items:${listId}`)
       .on(
@@ -92,10 +90,19 @@ export function useListItems(listId?: string) {
           filter: `list_id=eq.${listId}`,
         },
         (payload) => {
-          console.log('[useListItems] Received real-time event:', payload.eventType, payload);
-          
           if (payload.eventType === 'INSERT') {
-            setItems((prev) => [...prev, payload.new as ListItem]);
+            setItems((prev) => {
+              // Check if item already exists (from optimistic update)
+              const exists = prev.some(item => item.id === payload.new.id);
+              if (exists) {
+                // Replace optimistic item with real data
+                return prev.map(item => 
+                  item.id === payload.new.id ? (payload.new as ListItem) : item
+                );
+              }
+              // Add new item
+              return [...prev, payload.new as ListItem];
+            });
           } else if (payload.eventType === 'UPDATE') {
             setItems((prev) =>
               prev.map((item) =>
@@ -107,12 +114,9 @@ export function useListItems(listId?: string) {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('[useListItems] Subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
-      console.log('[useListItems] Cleaning up subscription for list:', listId);
       supabase.removeChannel(channel);
     };
   }, [user, listId]);
