@@ -27,6 +27,7 @@ export function useListItems(listId?: string) {
   const { user } = useAuth();
   const [items, setItems] = useState<ListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const optimisticItemsRef = useRef<Set<string>>(new Set());
 
   const sortItemsByPosition = useCallback(
     (unsorted: ListItem[]) => {
@@ -100,17 +101,32 @@ export function useListItems(listId?: string) {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             setItems((prev) => {
-              // Check if item already exists (from optimistic update)
-              const exists = prev.some(item => item.id === payload.new.id);
-              if (exists) {
-                // Replace optimistic item with real data
-                const replaced = prev.map(item =>
-                  item.id === payload.new.id ? (payload.new as ListItem) : item
-                );
-                return sortItemsByPosition(replaced);
+              const newItem = payload.new as ListItem;
+              
+              // Check if this is our own optimistic update coming back
+              // We track optimistic items by position and content
+              const optimisticIndex = prev.findIndex(item => 
+                item.id.startsWith('temp-') && 
+                item.content === newItem.content &&
+                item.position === newItem.position
+              );
+              
+              if (optimisticIndex !== -1) {
+                // Replace the optimistic item with the real one
+                const updated = [...prev];
+                updated[optimisticIndex] = newItem;
+                optimisticItemsRef.current.delete(prev[optimisticIndex].id);
+                return sortItemsByPosition(updated);
               }
-              // Add new item
-              return sortItemsByPosition([...prev, payload.new as ListItem]);
+              
+              // Check if item already exists by real ID (shouldn't happen but be safe)
+              const exists = prev.some(item => item.id === newItem.id);
+              if (exists) {
+                return prev;
+              }
+              
+              // Add new item (from another user or tab)
+              return sortItemsByPosition([...prev, newItem]);
             });
           } else if (payload.eventType === 'UPDATE') {
             setItems((prev) =>
@@ -162,6 +178,7 @@ export function useListItems(listId?: string) {
         };
 
         // Optimistically add to UI (ensure sorted so it appears at the top)
+        optimisticItemsRef.current.add(optimisticItem.id);
         setItems((prev) => sortItemsByPosition([...prev, optimisticItem]));
 
         const { data, error } = await supabase
@@ -179,16 +196,13 @@ export function useListItems(listId?: string) {
         if (error) {
           console.error('Error creating list item:', error);
           // Rollback optimistic update
+          optimisticItemsRef.current.delete(optimisticItem.id);
           setItems((prev) => prev.filter((item) => item.id !== optimisticItem.id));
           return null;
         }
 
-        // Replace optimistic item with real item
-        setItems((prev) =>
-          sortItemsByPosition(
-            prev.map((item) => (item.id === optimisticItem.id ? data : item))
-          )
-        );
+        // Don't replace here - let the real-time subscription handle it
+        // This prevents the duplication issue
 
         return data;
       } catch (error) {
