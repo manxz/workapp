@@ -63,6 +63,11 @@ export default function MentionInput({
   const handleInput = useCallback(() => {
     const text = getTextContent();
     
+    // If empty, ensure the div is truly empty (remove any <br> or empty text nodes)
+    if (text.trim() === "" && editorRef.current) {
+      editorRef.current.innerHTML = "";
+    }
+    
     // Check for mention mode
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {

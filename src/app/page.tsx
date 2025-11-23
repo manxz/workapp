@@ -19,6 +19,7 @@ import { useUnreadDots } from "@/hooks/useUnreadDots";
 import { AppProvider, AppCommunication } from "@/apps/AppContext";
 import { AVAILABLE_APPS } from "@/apps/registry";
 import { setupNotificationSound } from "@/global/notificationSound";
+import { setupFavicon } from "@/global/favicon";
 import { setOriginalTitle, clearUnreadCount } from "@/global/tabTitle";
 
 // Dynamically import apps for code splitting
@@ -64,6 +65,7 @@ function HomeContent() {
   // Initialize notification systems on mount
   useEffect(() => {
     setupNotificationSound();
+    setupFavicon();
     setOriginalTitle("Workapp");
   }, []);
   

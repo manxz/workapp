@@ -5,6 +5,7 @@
  */
 
 import { playNotificationSound } from "@/global/notificationSound";
+import { updateFaviconWithBadge } from "@/global/favicon";
 
 let originalTitle = "Workapp";
 let unreadCount = 0;
@@ -25,6 +26,7 @@ export function setOriginalTitle(title: string) {
 export function incrementUnreadCount() {
   unreadCount++;
   updateTabTitle();
+  updateFaviconWithBadge(true);
   playNotificationSound();
 }
 
@@ -35,6 +37,7 @@ export function incrementUnreadCount() {
 export function setUnreadCount(count: number) {
   unreadCount = count;
   updateTabTitle();
+  updateFaviconWithBadge(count > 0);
 }
 
 /**
@@ -44,6 +47,7 @@ export function setUnreadCount(count: number) {
 export function clearUnreadCount() {
   unreadCount = 0;
   updateTabTitle();
+  updateFaviconWithBadge(false);
 }
 
 /**
