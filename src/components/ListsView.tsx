@@ -197,9 +197,10 @@ export default function ListsView({
       
       // Don't forget the last item
       if (currentItem !== null) {
+        const finalItem = currentItem;
         items.push({
-          content: currentItem.content,
-          notes: currentItem.notes.join('\n')
+          content: finalItem.content,
+          notes: finalItem.notes.join('\n')
         });
       }
       
