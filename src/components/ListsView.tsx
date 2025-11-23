@@ -70,6 +70,55 @@ export default function ListsView({
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    
+    // Helper to clean up list item text
+    const cleanItem = (text: string): string => {
+      return text
+        .replace(/^[-*•]\s+/, '') // Remove bullet points (-, *, •)
+        .replace(/^\d+\.\s+/, '') // Remove numbered lists (1., 2., etc)
+        .replace(/^\[\s*\]\s*/, '') // Remove checkboxes [ ]
+        .replace(/^\[x\]\s*/i, '') // Remove checked boxes [x]
+        .trim();
+    };
+    
+    // Split by newlines first
+    const lines = pastedText.split(/\r?\n/).map(line => cleanItem(line)).filter(line => line.length > 0);
+    
+    // If multiple lines, create multiple items
+    if (lines.length > 1) {
+      e.preventDefault();
+      
+      // Create all items
+      lines.forEach(line => {
+        onCreateItem(line);
+      });
+      
+      setNewItemText("");
+      return;
+    }
+    
+    // If single line, check for comma-separated items
+    if (lines.length === 1) {
+      const commaSeparated = lines[0].split(',').map(item => item.trim()).filter(item => item.length > 0);
+      
+      // If multiple comma-separated items (and they're reasonably short), create multiple
+      if (commaSeparated.length > 1 && commaSeparated.every(item => item.length < 100)) {
+        e.preventDefault();
+        
+        commaSeparated.forEach(item => {
+          onCreateItem(item);
+        });
+        
+        setNewItemText("");
+        return;
+      }
+    }
+    
+    // Otherwise, let default paste behavior happen (single item)
+  };
+
   const handleDoubleClick = (item: ListItem) => {
     setEditingItemId(item.id);
     setEditingText(item.content);
@@ -226,6 +275,7 @@ export default function ListsView({
             value={newItemText}
             onChange={(e) => setNewItemText(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder="New list item"
             className="flex-1 text-[13px] font-medium text-black placeholder:text-[#B0B0B0] outline-none bg-transparent"
           />

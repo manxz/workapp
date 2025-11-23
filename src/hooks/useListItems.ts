@@ -135,9 +135,9 @@ export function useListItems(listId?: string) {
         const maxPosition = items.reduce((max, item) => Math.max(max, item.position), -1);
         const newPosition = maxPosition + 1;
 
-        // Create optimistic item
+        // Create optimistic item with unique ID (timestamp + random to avoid collisions)
         const optimisticItem: ListItem = {
-          id: `temp-${Date.now()}`,
+          id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           list_id: listId,
           content,
           position: newPosition,
