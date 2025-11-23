@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, KeyboardEvent, useRef, useEffect } from "react";
+import { useState, KeyboardEvent, useRef, useEffect, useCallback } from "react";
 import { Trash, Eye, EyeSlash, Article, Users } from "@phosphor-icons/react";
 import ProgressIndicator from "./ProgressIndicator";
 import Checkbox from "./Checkbox";
@@ -54,9 +54,9 @@ export default function ListsView({
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [editingNotes, setEditingNotes] = useState("");
-  const [flashingItemId, setFlashingItemId] = useState<string | null>(null);
   const newItemInputRef = useRef<HTMLInputElement>(null);
   const newItemNotesRef = useRef<HTMLInputElement>(null);
+  const skipNotesBlurRef = useRef(false);
   const editingContainerRef = useRef<HTMLDivElement>(null);
   const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -81,32 +81,40 @@ export default function ListsView({
     .filter((item) => item.completed)
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
+  const commitNewItem = useCallback(() => {
+    const trimmedText = newItemText.trim();
+    if (!trimmedText) return false;
+
+    onCreateItem(trimmedText, newItemNotes.trim() || undefined);
+    setNewItemText("");
+    setNewItemNotes("");
+    return true;
+  }, [newItemText, newItemNotes, onCreateItem]);
+
   const handleNewItemTextKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Tab") {
       e.preventDefault();
       newItemNotesRef.current?.focus();
     } else if (e.key === "Enter" && newItemText.trim()) {
-      onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
-      setNewItemText("");
-      setNewItemNotes("");
-      newItemInputRef.current?.focus();
+      e.preventDefault();
+      if (commitNewItem()) {
+        newItemInputRef.current?.focus();
+      }
     }
   };
 
   const handleNewItemNotesKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Tab") {
       e.preventDefault();
-      if (newItemText.trim()) {
-        onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
-        setNewItemText("");
-        setNewItemNotes("");
+      skipNotesBlurRef.current = true;
+      if (commitNewItem()) {
         newItemInputRef.current?.focus();
       }
     } else if (e.key === "Enter" && newItemText.trim()) {
-      onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
-      setNewItemText("");
-      setNewItemNotes("");
-      newItemInputRef.current?.focus();
+      e.preventDefault();
+      if (commitNewItem()) {
+        newItemInputRef.current?.focus();
+      }
     }
   };
 
@@ -116,19 +124,16 @@ export default function ListsView({
       return;
     }
     
-    if (newItemText.trim()) {
-      onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
-      setNewItemText("");
-      setNewItemNotes("");
-    }
+    commitNewItem();
   };
 
   const handleNewItemNotesBlur = () => {
-    if (newItemText.trim()) {
-      onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
-      setNewItemText("");
-      setNewItemNotes("");
+    if (skipNotesBlurRef.current) {
+      skipNotesBlurRef.current = false;
+      return;
     }
+
+    commitNewItem();
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {

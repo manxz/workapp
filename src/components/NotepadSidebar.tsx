@@ -185,11 +185,7 @@ function NotepadSidebar({
 
           {/* My Lists */}
           <div className="flex flex-col px-2">
-          {(() => {
-            const myLists = lists.filter(list => !list.is_shared || (list.collaborator_count || 0) === 0);
-            console.log('[NotepadSidebar] My lists:', myLists.map(l => l.name));
-            return myLists;
-          })().map((list) => (
+          {lists.filter(list => !list.is_shared || (list.collaborator_count || 0) === 0).map((list) => (
             <ListItem
               key={list.id}
               list={list}

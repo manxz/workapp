@@ -28,6 +28,13 @@ export function useListItems(listId?: string) {
   const [items, setItems] = useState<ListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const sortItemsByPosition = useCallback(
+    (unsorted: ListItem[]) => {
+      return [...unsorted].sort((a, b) => a.position - b.position);
+    },
+    []
+  );
+
   /**
    * Fetches all items for the specified list.
    */
@@ -50,14 +57,14 @@ export function useListItems(listId?: string) {
           console.error('Error fetching list items:', error);
         }
       } else if (data) {
-        setItems(data);
+        setItems(sortItemsByPosition(data));
       }
     } catch (error) {
       console.error('Error in fetchItems:', error);
     } finally {
       setLoading(false);
     }
-  }, [user, listId]);
+  }, [user, listId, sortItemsByPosition]);
 
   /**
    * Reset items when listId changes to prevent showing stale data
@@ -97,17 +104,20 @@ export function useListItems(listId?: string) {
               const exists = prev.some(item => item.id === payload.new.id);
               if (exists) {
                 // Replace optimistic item with real data
-                return prev.map(item => 
+                const replaced = prev.map(item =>
                   item.id === payload.new.id ? (payload.new as ListItem) : item
                 );
+                return sortItemsByPosition(replaced);
               }
               // Add new item
-              return [...prev, payload.new as ListItem];
+              return sortItemsByPosition([...prev, payload.new as ListItem]);
             });
           } else if (payload.eventType === 'UPDATE') {
             setItems((prev) =>
-              prev.map((item) =>
+              sortItemsByPosition(
+                prev.map((item) =>
                 item.id === payload.new.id ? (payload.new as ListItem) : item
+                )
               )
             );
           } else if (payload.eventType === 'DELETE') {
@@ -120,7 +130,7 @@ export function useListItems(listId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, listId]);
+  }, [user, listId, sortItemsByPosition]);
 
   /**
    * Creates a new list item.
@@ -132,9 +142,12 @@ export function useListItems(listId?: string) {
       if (!user || !listId) return null;
 
       try {
-        // Get the max position
-        const maxPosition = items.reduce((max, item) => Math.max(max, item.position), -1);
-        const newPosition = maxPosition + 1;
+        // Get the minimum position so we can insert the new item at the top
+        const minPosition = items.reduce(
+          (min, item) => Math.min(min, item.position),
+          Number.POSITIVE_INFINITY
+        );
+        const newPosition = minPosition === Number.POSITIVE_INFINITY ? 0 : minPosition - 1;
 
         // Create optimistic item with unique ID (timestamp + random to avoid collisions)
         const optimisticItem: ListItem = {
@@ -148,8 +161,8 @@ export function useListItems(listId?: string) {
           updated_at: new Date().toISOString(),
         };
 
-        // Optimistically add to UI
-        setItems((prev) => [...prev, optimisticItem]);
+        // Optimistically add to UI (ensure sorted so it appears at the top)
+        setItems((prev) => sortItemsByPosition([...prev, optimisticItem]));
 
         const { data, error } = await supabase
           .from('list_items')
@@ -172,7 +185,9 @@ export function useListItems(listId?: string) {
 
         // Replace optimistic item with real item
         setItems((prev) =>
-          prev.map((item) => (item.id === optimisticItem.id ? data : item))
+          sortItemsByPosition(
+            prev.map((item) => (item.id === optimisticItem.id ? data : item))
+          )
         );
 
         return data;
@@ -181,7 +196,7 @@ export function useListItems(listId?: string) {
         return null;
       }
     },
-    [user, listId, items]
+    [user, listId, items, sortItemsByPosition]
   );
 
   /**
