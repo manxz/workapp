@@ -76,7 +76,7 @@ const ListItem = memo(({
           {list.name}
         </p>
         {list.isShared && (
-          <Users size={14} weight="fill" className="text-[#343330] flex-shrink-0" />
+          <Users size={14} weight="fill" className="text-[#6A6A6A] flex-shrink-0" />
         )}
       </div>
       <div className="flex items-center gap-[2px]">
