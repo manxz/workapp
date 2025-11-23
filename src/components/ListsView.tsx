@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, KeyboardEvent, useRef, useEffect } from "react";
-import { Trash, Eye, EyeSlash, Article } from "@phosphor-icons/react";
+import { Trash, Eye, EyeSlash, Article, Users } from "@phosphor-icons/react";
 import ProgressIndicator from "./ProgressIndicator";
 import Checkbox from "./Checkbox";
 import { Collaborator } from "@/hooks/useListCollaborators";
@@ -164,6 +164,9 @@ export default function ListsView({
             size="medium"
           />
           <h2 className="text-base font-medium text-black">{listName}</h2>
+          {isShared && (
+            <Users size={16} weight="fill" className="text-[#6A6A6A]" />
+          )}
           <span className="text-base font-medium text-neutral-500">
             {uncompletedCount}
           </span>
@@ -290,7 +293,7 @@ export default function ListsView({
             />
           </div>
           {/* Notes input - aligned with main input */}
-          <div className="flex items-center gap-2 ml-[24px]">
+          <div className="flex items-center gap-2 ml-[21px]">
             <input
               type="text"
               value={newItemNotes}
@@ -324,7 +327,7 @@ export default function ListsView({
                   />
                 </div>
                 {/* Notes input when editing - aligned with main input */}
-                <div className="flex items-center gap-2 ml-[24px]">
+                <div className="flex items-center gap-2 ml-[21px]">
                   <input
                     type="text"
                     value={editingNotes}
