@@ -13,6 +13,7 @@ type ListItem = {
   content: string;
   notes?: string;
   completed: boolean;
+  updated_at?: string;
 };
 
 type ListsViewProps = {
@@ -80,7 +81,11 @@ export default function ListsView({
   const uncompletedItems = items.filter((item) => !item.completed);
   const completedItems = items
     .filter((item) => item.completed)
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    .sort((a, b) => {
+      const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return bTime - aTime;
+    });
 
   const commitNewItem = useCallback(() => {
     const trimmedText = newItemText.trim();
