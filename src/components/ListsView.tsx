@@ -55,6 +55,7 @@ export default function ListsView({
   const [editingText, setEditingText] = useState("");
   const [editingNotes, setEditingNotes] = useState("");
   const newItemInputRef = useRef<HTMLInputElement>(null);
+  const editingContainerRef = useRef<HTMLDivElement>(null);
 
   const isCurrentUserOwner = user?.id === listOwnerId;
 
@@ -152,7 +153,12 @@ export default function ListsView({
     }
   };
 
-  const handleEditBlur = (itemId: string) => {
+  const handleEditBlur = (itemId: string, e: React.FocusEvent) => {
+    // Check if the new focus target is within the editing container
+    if (editingContainerRef.current?.contains(e.relatedTarget as Node)) {
+      return; // Don't close if clicking within the same editing container
+    }
+    
     if (editingText.trim()) {
       onUpdateItem(itemId, { content: editingText.trim(), notes: editingNotes.trim() });
     }
@@ -320,7 +326,10 @@ export default function ListsView({
           <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"}>
             {editingItemId === item.id ? (
               // Editing mode - checkbox inside container with adjusted padding
-              <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+              <div 
+                ref={editingContainerRef}
+                className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+              >
                 <div className="flex items-center gap-2">
                   <Checkbox
                     state="default"
@@ -331,7 +340,7 @@ export default function ListsView({
                     value={editingText}
                     onChange={(e) => setEditingText(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
-                    onBlur={() => handleEditBlur(item.id)}
+                    onBlur={(e) => handleEditBlur(item.id, e)}
                     autoFocus
                     className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent"
                   />
@@ -343,6 +352,7 @@ export default function ListsView({
                     value={editingNotes}
                     onChange={(e) => setEditingNotes(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                    onBlur={(e) => handleEditBlur(item.id, e)}
                     placeholder="Notes"
                     className="w-full text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent"
                   />
