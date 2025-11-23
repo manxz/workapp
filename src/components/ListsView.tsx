@@ -319,15 +319,13 @@ export default function ListsView({
         {uncompletedItems.map((item) => (
           <div key={item.id} className="px-4 py-1">
             {editingItemId === item.id ? (
-              // Editing mode - show both content and notes inputs with outline
-              <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center justify-center w-4 h-4">
-                    <Checkbox
-                      state="default"
-                      onClick={() => onToggleItem(item.id)}
-                    />
-                  </div>
+              // Editing mode - checkbox outside, content inside bordered container
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  state="default"
+                  onClick={() => onToggleItem(item.id)}
+                />
+                <div className="flex-1 bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
                   <input
                     type="text"
                     value={editingText}
@@ -337,9 +335,7 @@ export default function ListsView({
                     autoFocus
                     className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent"
                   />
-                </div>
-                {/* Notes input when editing - aligned with main input */}
-                <div className="flex items-center gap-2 pl-6">
+                  {/* Notes input when editing */}
                   <input
                     type="text"
                     value={editingNotes}
