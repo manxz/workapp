@@ -80,8 +80,11 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
 
   // Transform raw lists to include completion counts
   // For the selected list, use local items state for instant updates
+  // Sort by created_at descending (latest first)
   const lists: List[] = useMemo(() => {
-    return rawLists.map((list) => {
+    return rawLists
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((list) => {
       // Use local items state for selected list for instant UI updates
       // But only if items have loaded (not empty during transition)
       if (list.id === selectedListId && !itemsLoading) {
