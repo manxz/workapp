@@ -65,7 +65,9 @@ export default function ListsView({
   }, [listName]);
 
   const uncompletedItems = items.filter((item) => !item.completed);
-  const completedItems = items.filter((item) => item.completed);
+  const completedItems = items
+    .filter((item) => item.completed)
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newItemText.trim()) {
