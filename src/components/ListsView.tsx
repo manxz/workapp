@@ -399,7 +399,7 @@ export default function ListsView({
 
         {/* Uncompleted Items */}
         {uncompletedItems.map((item) => (
-          <div key={item.id} className={editingItemId === item.id ? "px-2 py-1 transition-all duration-300 ease-in-out" : "px-4 py-1 transition-all duration-300 ease-in-out"}>
+          <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"}>
             {editingItemId === item.id ? (
               // Editing mode - checkbox inside container with adjusted padding
               <div 
@@ -483,7 +483,7 @@ export default function ListsView({
         {/* Completed Items */}
         {showCompleted &&
           completedItems.map((item) => (
-            <div key={item.id} className={editingItemId === item.id ? "px-2 py-1 transition-all duration-300 ease-in-out" : "px-4 py-1 transition-all duration-300 ease-in-out"}>
+            <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"}>
               {editingItemId === item.id ? (
                 // Editing mode - checkbox inside container with adjusted padding
                 <div 

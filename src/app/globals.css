@@ -53,6 +53,10 @@ body {
   }
 }
 
+.animate-scale-in {
+  animation: scaleIn 0.15s ease-out forwards;
+}
+
 /* Tiptap Editor Styles */
 .ProseMirror {
   outline: none;
