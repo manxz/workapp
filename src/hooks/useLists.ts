@@ -47,8 +47,6 @@ export function useLists() {
         `)
         .order('created_at', { ascending: true });
 
-      console.log('Lists query result:', { data, error, hasData: !!data, hasError: !!error });
-      
       if (error) {
         console.error('Error fetching lists:', error);
         return; // Exit early on error
@@ -80,7 +78,6 @@ export function useLists() {
           completed_count: list.list_items?.filter((item: any) => item.completed).length || 0,
           isShared: (collabCounts[list.id] || 0) > 0,
         }));
-        console.log('Setting lists:', listsWithCounts);
         setLists(listsWithCounts);
       }
     } catch (error) {
