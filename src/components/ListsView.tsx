@@ -54,6 +54,7 @@ export default function ListsView({
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [editingNotes, setEditingNotes] = useState("");
+  const [flashingItemId, setFlashingItemId] = useState<string | null>(null);
   const newItemInputRef = useRef<HTMLInputElement>(null);
   const newItemNotesRef = useRef<HTMLInputElement>(null);
   const editingContainerRef = useRef<HTMLDivElement>(null);

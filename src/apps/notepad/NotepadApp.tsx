@@ -82,7 +82,7 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
   // For the selected list, use local items state for instant updates
   // Sort by created_at descending (latest first)
   const lists: List[] = useMemo(() => {
-    return rawLists
+    return [...rawLists]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       .map((list) => {
       // Use local items state for selected list for instant UI updates
