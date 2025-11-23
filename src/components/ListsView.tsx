@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, KeyboardEvent, useRef, useEffect } from "react";
-import { Trash, Eye, EyeSlash } from "@phosphor-icons/react";
+import { Trash, Eye, EyeSlash, Article } from "@phosphor-icons/react";
 import ProgressIndicator from "./ProgressIndicator";
 import Checkbox from "./Checkbox";
 import { Collaborator } from "@/hooks/useListCollaborators";
@@ -11,6 +11,7 @@ import { useUsers } from "@/hooks/useUsers";
 type ListItem = {
   id: string;
   content: string;
+  notes?: string;
   completed: boolean;
 };
 
@@ -23,8 +24,8 @@ type ListsViewProps = {
   isShared: boolean;
   collaborators: Collaborator[];
   onToggleItem: (itemId: string) => void;
-  onCreateItem: (content: string) => void;
-  onUpdateItem: (itemId: string, content: string) => void;
+  onCreateItem: (content: string, notes?: string) => void;
+  onUpdateItem: (itemId: string, updates: Partial<ListItem>) => void;
   onDeleteList: () => void;
   onShareList: () => void;
   listOwnerId: string;
@@ -48,9 +49,11 @@ export default function ListsView({
   const { user } = useAuth();
   const { users } = useUsers();
   const [newItemText, setNewItemText] = useState("");
+  const [newItemNotes, setNewItemNotes] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
+  const [editingNotes, setEditingNotes] = useState("");
   const newItemInputRef = useRef<HTMLInputElement>(null);
 
   const isCurrentUserOwner = user?.id === listOwnerId;
@@ -65,8 +68,9 @@ export default function ListsView({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && newItemText.trim()) {
-      onCreateItem(newItemText.trim());
+      onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
       setNewItemText("");
+      setNewItemNotes("");
     }
   };
 
@@ -92,7 +96,7 @@ export default function ListsView({
       
       // Create all items
       lines.forEach(line => {
-        onCreateItem(line);
+        onCreateItem(line, undefined);
       });
       
       setNewItemText("");
@@ -108,7 +112,7 @@ export default function ListsView({
         e.preventDefault();
         
         commaSeparated.forEach(item => {
-          onCreateItem(item);
+          onCreateItem(item, undefined);
         });
         
         setNewItemText("");
@@ -122,27 +126,31 @@ export default function ListsView({
   const handleDoubleClick = (item: ListItem) => {
     setEditingItemId(item.id);
     setEditingText(item.content);
+    setEditingNotes(item.notes || "");
   };
 
   const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>, itemId: string) => {
     if (e.key === "Enter") {
       if (editingText.trim()) {
-        onUpdateItem(itemId, editingText.trim());
+        onUpdateItem(itemId, { content: editingText.trim(), notes: editingNotes.trim() });
       }
       setEditingItemId(null);
       setEditingText("");
+      setEditingNotes("");
     } else if (e.key === "Escape") {
       setEditingItemId(null);
       setEditingText("");
+      setEditingNotes("");
     }
   };
 
   const handleEditBlur = (itemId: string) => {
     if (editingText.trim()) {
-      onUpdateItem(itemId, editingText.trim());
+      onUpdateItem(itemId, { content: editingText.trim(), notes: editingNotes.trim() });
     }
     setEditingItemId(null);
     setEditingText("");
+    setEditingNotes("");
   };
 
   return (
@@ -267,44 +275,83 @@ export default function ListsView({
       {/* List Items */}
       <div className="flex-1 overflow-y-auto">
         {/* New Item Input */}
-        <div className="flex items-center gap-2 px-4 py-1">
-          <Checkbox state="add" />
-          <input
-            ref={newItemInputRef}
-            type="text"
-            value={newItemText}
-            onChange={(e) => setNewItemText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            placeholder="New list item"
-            className="flex-1 text-[13px] font-medium text-black placeholder:text-[#B0B0B0] outline-none bg-transparent"
-          />
+        <div className="px-4 py-1">
+          <div className="flex items-center gap-2">
+            <Checkbox state="add" />
+            <input
+              ref={newItemInputRef}
+              type="text"
+              value={newItemText}
+              onChange={(e) => setNewItemText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder="New list item"
+              className="flex-1 text-[13px] font-medium text-black placeholder:text-[#B0B0B0] outline-none bg-transparent"
+            />
+          </div>
+          {/* Notes input */}
+          <div className="flex items-center gap-2 ml-6">
+            <input
+              type="text"
+              value={newItemNotes}
+              onChange={(e) => setNewItemNotes(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Notes"
+              className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
+            />
+          </div>
         </div>
 
         {/* Uncompleted Items */}
         {uncompletedItems.map((item) => (
-          <div key={item.id} className="flex items-center gap-2 px-4 py-1">
-            <Checkbox
-              state="default"
-              onClick={() => onToggleItem(item.id)}
-            />
+          <div key={item.id} className="px-4 py-1">
             {editingItemId === item.id ? (
-              <input
-                type="text"
-                value={editingText}
-                onChange={(e) => setEditingText(e.target.value)}
-                onKeyDown={(e) => handleEditKeyDown(e, item.id)}
-                onBlur={() => handleEditBlur(item.id)}
-                autoFocus
-                className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent"
-              />
+              // Editing mode - show both content and notes inputs
+              <div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    state="default"
+                    onClick={() => onToggleItem(item.id)}
+                  />
+                  <input
+                    type="text"
+                    value={editingText}
+                    onChange={(e) => setEditingText(e.target.value)}
+                    onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                    onBlur={() => handleEditBlur(item.id)}
+                    autoFocus
+                    className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent"
+                  />
+                </div>
+                {/* Notes input when editing */}
+                <div className="flex items-center gap-2 ml-6">
+                  <input
+                    type="text"
+                    value={editingNotes}
+                    onChange={(e) => setEditingNotes(e.target.value)}
+                    onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                    placeholder="Notes"
+                    className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
+                  />
+                </div>
+              </div>
             ) : (
-              <p
-                className="text-[13px] font-medium text-black flex-1 cursor-text"
-                onDoubleClick={() => handleDoubleClick(item)}
-              >
-                {item.content}
-              </p>
+              // View mode - show content with doc icon if notes exist
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  state="default"
+                  onClick={() => onToggleItem(item.id)}
+                />
+                <p
+                  className="text-[13px] font-medium text-black flex-1 cursor-text"
+                  onDoubleClick={() => handleDoubleClick(item)}
+                >
+                  {item.content}
+                </p>
+                {item.notes && item.notes.trim() && (
+                  <Article size={14} weight="regular" className="text-[#6A6A6A] flex-shrink-0" />
+                )}
+              </div>
             )}
           </div>
         ))}

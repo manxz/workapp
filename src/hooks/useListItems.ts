@@ -6,6 +6,7 @@ export type ListItem = {
   id: string;
   list_id: string;
   content: string;
+  notes?: string;
   completed: boolean;
   position: number;
   created_at: string;
@@ -127,7 +128,7 @@ export function useListItems(listId?: string) {
    * Uses optimistic update for instant UI feedback.
    */
   const createItem = useCallback(
-    async (content: string): Promise<ListItem | null> => {
+    async (content: string, notes?: string): Promise<ListItem | null> => {
       if (!user || !listId) return null;
 
       try {
@@ -140,6 +141,7 @@ export function useListItems(listId?: string) {
           id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           list_id: listId,
           content,
+          notes: notes || '',
           position: newPosition,
           completed: false,
           created_at: new Date().toISOString(),
@@ -154,6 +156,7 @@ export function useListItems(listId?: string) {
           .insert({
             list_id: listId,
             content,
+            notes: notes || '',
             position: newPosition,
             completed: false,
           })

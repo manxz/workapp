@@ -180,8 +180,8 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
   };
 
   // Handle item creation
-  const handleCreateItem = async (content: string) => {
-    await createItem(content);
+  const handleCreateItem = async (content: string, notes?: string) => {
+    await createItem(content, notes);
     // Refresh in background to update database counts for other lists
     refreshLists();
   };
@@ -194,8 +194,8 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
   };
 
   // Handle item update
-  const handleUpdateItem = async (itemId: string, content: string) => {
-    await updateItem(itemId, { content });
+  const handleUpdateItem = async (itemId: string, updates: Partial<{content: string; notes?: string; completed: boolean}>) => {
+    await updateItem(itemId, updates);
   };
 
   // Handle note creation

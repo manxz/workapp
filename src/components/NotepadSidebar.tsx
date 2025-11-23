@@ -10,7 +10,8 @@ type List = {
   name: string;
   completed: number;
   total: number;
-  isShared?: boolean; // New: indicates if list has collaborators
+  is_shared?: boolean; // New: indicates if list has collaborators
+  collaborator_count?: number; // New: number of collaborators
 };
 
 type NotepadSidebarProps = {
@@ -75,7 +76,7 @@ const ListItem = memo(({
         <p className={`text-[13px] text-black ${isSelected ? "font-semibold" : "font-medium"}`}>
           {list.name}
         </p>
-        {list.isShared && (
+        {list.is_shared && (
           <Users size={14} weight="fill" className="text-[#6A6A6A] flex-shrink-0" />
         )}
       </div>
@@ -164,13 +165,13 @@ function NotepadSidebar({
           <h2 className="text-lg font-medium text-black">Notepad</h2>
         </div>
 
-        {/* Lists Section */}
+        {/* My Lists Section */}
         <div className="flex flex-col w-full">
-          {/* Lists Header */}
+          {/* My Lists Header */}
           <div className="px-2 pr-2">
             <div className="flex items-center justify-between pl-2 pr-0 py-1.5">
               <div className="flex items-center gap-0.5">
-                <p className="text-[13px] font-semibold text-neutral-500">Lists</p>
+                <p className="text-[13px] font-semibold text-neutral-500">My lists</p>
                 <CaretDown size={16} className="text-neutral-500" weight="bold" />
               </div>
               <button
@@ -182,9 +183,9 @@ function NotepadSidebar({
             </div>
           </div>
 
-          {/* Lists */}
+          {/* My Lists */}
           <div className="flex flex-col px-2">
-          {lists.map((list) => (
+          {lists.filter(list => !list.is_shared || (list.collaborator_count || 0) === 0).map((list) => (
             <ListItem
               key={list.id}
               list={list}
@@ -194,6 +195,33 @@ function NotepadSidebar({
           ))}
           </div>
         </div>
+
+        {/* Shared Lists Section */}
+        {lists.some(list => list.is_shared && (list.collaborator_count || 0) > 0) && (
+          <div className="flex flex-col w-full mt-4">
+            {/* Shared Lists Header */}
+            <div className="px-2 pr-2">
+              <div className="flex items-center justify-between pl-2 pr-0 py-1.5">
+                <div className="flex items-center gap-0.5">
+                  <p className="text-[13px] font-semibold text-neutral-500">Shared</p>
+                  <CaretDown size={16} className="text-neutral-500" weight="bold" />
+                </div>
+              </div>
+            </div>
+
+            {/* Shared Lists */}
+            <div className="flex flex-col px-2">
+            {lists.filter(list => list.is_shared && (list.collaborator_count || 0) > 0).map((list) => (
+              <ListItem
+                key={list.id}
+                list={list}
+                isSelected={selectedId === list.id && selectedType === "list"}
+                onSelect={onSelectList!}
+              />
+            ))}
+            </div>
+          </div>
+        )}
 
         {/* Notes Section - Simple, always visible */}
         <div className="flex flex-col w-full">
