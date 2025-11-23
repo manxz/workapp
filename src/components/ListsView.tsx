@@ -404,19 +404,19 @@ export default function ListsView({
                     className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent leading-[normal]"
                   />
                 </div>
-                {/* Notes input when editing */}
-                <div className="pl-[21px]">
-                  <textarea
-                    value={editingNotes}
-                    onChange={(e) => setEditingNotes(e.target.value)}
-                    onKeyDown={(e) => handleEditKeyDown(e, item.id)}
-                    onBlur={(e) => handleEditBlur(item.id, e)}
-                    placeholder="Notes"
-                    rows={1}
-                    className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none"
-                  />
+                  {/* Notes input when editing */}
+                  <div className="pl-[21px]">
+                    <textarea
+                      value={editingNotes}
+                      onChange={(e) => setEditingNotes(e.target.value)}
+                      onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                      onBlur={(e) => handleEditBlur(item.id, e)}
+                      placeholder="Notes"
+                      rows={1}
+                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none whitespace-pre-wrap break-words overflow-hidden"
+                    />
+                  </div>
                 </div>
-              </div>
             ) : (
               // View mode - show content with doc icon if notes exist
               <div className="flex items-center gap-2">
@@ -495,7 +495,7 @@ export default function ListsView({
                       onBlur={(e) => handleEditBlur(item.id, e)}
                       placeholder="Notes"
                       rows={1}
-                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none"
+                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none whitespace-pre-wrap break-words overflow-hidden"
                     />
                   </div>
                 </div>
