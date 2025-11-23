@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,6 +28,7 @@ export function useLists() {
   const { user } = useAuth();
   const [lists, setLists] = useState<List[]>([]);
   const [loading, setLoading] = useState(true);
+  const skipNextRealtimeUpdate = useRef(false);
 
   /**
    * Fetches all lists for the current user with item counts.
@@ -94,7 +95,6 @@ export function useLists() {
             collaborator_count: collaboratorCount,
           };
         });
-        console.log('[useLists] Setting lists, first 3:', listsWithCounts.slice(0, 3).map(l => ({ name: l.name, created_at: l.created_at })));
         setLists(listsWithCounts);
       }
     } catch (error) {
@@ -128,6 +128,11 @@ export function useLists() {
           table: 'lists',
         },
         () => {
+          // Skip refetch if we just created a list (optimistic update already handled it)
+          if (skipNextRealtimeUpdate.current) {
+            skipNextRealtimeUpdate.current = false;
+            return;
+          }
           fetchLists();
         }
       )
@@ -205,6 +210,9 @@ export function useLists() {
         setLists((prev) =>
           prev.map((list) => (list.id === optimisticList.id ? data : list))
         );
+
+        // Skip the next real-time update since we already have the latest data
+        skipNextRealtimeUpdate.current = true;
 
         return data;
       } catch (error) {
