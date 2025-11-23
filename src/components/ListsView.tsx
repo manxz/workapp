@@ -290,15 +290,14 @@ export default function ListsView({
             />
           </div>
           {/* Notes input - aligned with main input */}
-          <div className="flex items-center gap-2">
-            <div className="w-4" /> {/* Spacer to match checkbox width */}
+          <div className="flex items-center gap-2 ml-[24px]">
             <input
               type="text"
               value={newItemNotes}
               onChange={(e) => setNewItemNotes(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Notes"
-              className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent ml-2"
+              className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
             />
           </div>
         </div>
@@ -325,15 +324,14 @@ export default function ListsView({
                   />
                 </div>
                 {/* Notes input when editing - aligned with main input */}
-                <div className="flex items-center gap-2">
-                  <div className="w-4" /> {/* Spacer to match checkbox width */}
+                <div className="flex items-center gap-2 ml-[24px]">
                   <input
                     type="text"
                     value={editingNotes}
                     onChange={(e) => setEditingNotes(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                     placeholder="Notes"
-                    className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent ml-2"
+                    className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
                   />
                 </div>
               </div>
