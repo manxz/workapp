@@ -406,28 +406,60 @@ export default function ListsView({
         {/* Completed Items */}
         {showCompleted &&
           completedItems.map((item) => (
-            <div key={item.id} className="flex items-center gap-2 px-4 py-1">
-              <Checkbox
-                state="filled"
-                onClick={() => onToggleItem(item.id)}
-              />
+            <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"}>
               {editingItemId === item.id ? (
-                <input
-                  type="text"
-                  value={editingText}
-                  onChange={(e) => setEditingText(e.target.value)}
-                  onKeyDown={(e) => handleEditKeyDown(e, item.id)}
-                  onBlur={() => handleEditBlur(item.id)}
-                  autoFocus
-                  className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent"
-                />
-              ) : (
-                <p
-                  className="text-[13px] font-medium text-black flex-1 cursor-text"
-                  onDoubleClick={() => handleDoubleClick(item)}
+                // Editing mode - checkbox inside container with adjusted padding
+                <div 
+                  ref={editingContainerRef}
+                  className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] py-2 px-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
                 >
-                  {item.content}
-                </p>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      state="filled"
+                      onClick={() => onToggleItem(item.id)}
+                    />
+                    <input
+                      type="text"
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                      onBlur={(e) => handleEditBlur(item.id, e)}
+                      autoFocus
+                      className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent leading-[normal]"
+                    />
+                  </div>
+                  {/* Notes input when editing */}
+                  <div className="pl-[21px]">
+                    <textarea
+                      value={editingNotes}
+                      onChange={(e) => setEditingNotes(e.target.value)}
+                      onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                      onBlur={(e) => handleEditBlur(item.id, e)}
+                      placeholder="Notes"
+                      rows={1}
+                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none"
+                    />
+                  </div>
+                </div>
+              ) : (
+                // View mode - show content with doc icon if notes exist
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    state="filled"
+                    onClick={() => onToggleItem(item.id)}
+                  />
+                  <div className="flex items-center gap-1 flex-1">
+                    <p
+                      className="text-[13px] font-medium text-black cursor-text"
+                      onDoubleClick={() => handleDoubleClick(item)}
+                    >
+                      {item.content}
+                    </p>
+                    {item.notes && item.notes.trim() && (
+                      <Article size={12} weight="regular" className="text-[#6A6A6A] opacity-60 flex-shrink-0" />
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           ))}
