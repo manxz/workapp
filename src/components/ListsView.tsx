@@ -127,9 +127,14 @@ export default function ListsView({
     commitNewItem();
   };
 
-  const handleNewItemNotesBlur = () => {
+  const handleNewItemNotesBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     if (skipNotesBlurRef.current) {
       skipNotesBlurRef.current = false;
+      return;
+    }
+
+    // Don't create item if focus is moving back to the item name input
+    if (e.relatedTarget === newItemInputRef.current) {
       return;
     }
 
