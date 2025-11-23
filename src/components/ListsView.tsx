@@ -200,13 +200,15 @@ export default function ListsView({
             </button>
           )}
 
-          {/* Delete Button */}
-          <button
-            onClick={onDeleteList}
-            className="flex items-center justify-center rounded-[7px] w-8 h-8 hover:bg-neutral-200 transition-colors"
-          >
-            <Trash size={16} weight="regular" />
-          </button>
+          {/* Delete Button - only for owner */}
+          {isCurrentUserOwner && (
+            <button
+              onClick={onDeleteList}
+              className="flex items-center justify-center rounded-[7px] w-8 h-8 hover:bg-neutral-200 transition-colors"
+            >
+              <Trash size={16} weight="regular" />
+            </button>
+          )}
         </div>
       </div>
 
