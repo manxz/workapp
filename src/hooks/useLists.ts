@@ -94,6 +94,7 @@ export function useLists() {
             collaborator_count: collaboratorCount,
           };
         });
+        console.log('[useLists] Setting lists, first 3:', listsWithCounts.slice(0, 3).map(l => ({ name: l.name, created_at: l.created_at })));
         setLists(listsWithCounts);
       }
     } catch (error) {

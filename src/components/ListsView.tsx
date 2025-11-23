@@ -110,7 +110,20 @@ export default function ListsView({
     }
   };
 
-  const handleNewItemBlur = () => {
+  const handleNewItemBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Don't create item if focus is moving to the notes input
+    if (e.relatedTarget === newItemNotesRef.current) {
+      return;
+    }
+    
+    if (newItemText.trim()) {
+      onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
+      setNewItemText("");
+      setNewItemNotes("");
+    }
+  };
+
+  const handleNewItemNotesBlur = () => {
     if (newItemText.trim()) {
       onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
       setNewItemText("");
@@ -427,7 +440,7 @@ export default function ListsView({
               value={newItemNotes}
               onChange={(e) => setNewItemNotes(e.target.value)}
               onKeyDown={handleNewItemNotesKeyDown}
-              onBlur={handleNewItemBlur}
+              onBlur={handleNewItemNotesBlur}
               placeholder="Notes"
               className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
             />
