@@ -355,7 +355,7 @@ export default function ListsView({
                     onBlur={(e) => handleEditBlur(item.id, e)}
                     placeholder="Notes"
                     rows={1}
-                    className="w-full text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none"
+                    className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none"
                   />
                 </div>
               </div>
