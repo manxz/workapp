@@ -44,7 +44,7 @@ export default function ShareListModal({
     if (isOpen) {
       setPendingChanges(new Map());
     }
-  }, [isOpen]);
+  }, [isOpen, collaborators]);
 
   if (!isOpen) return null;
 
@@ -59,101 +59,53 @@ export default function ShareListModal({
     );
   }
 
-  // Filter out users who already have access (accounting for pending changes)
-  const collaboratorUserIds = collaborators.map(c => c.user_id);
-  const pendingAdditions = Array.from(pendingChanges.entries())
-    .filter(([_, change]) => change.action === 'add')
-    .map(([userId]) => userId);
-  
-  const availableUsers = users.filter(u => 
-    u.id !== listOwnerId && // Not the owner
-    !collaboratorUserIds.includes(u.id) && // Not already a collaborator
-    !pendingAdditions.includes(u.id) // Not pending addition
-  );
+  // Get all team members (excluding owner)
+  const teamMembers = users.filter(u => u.id !== listOwnerId);
 
-  // Find owner user - need to check if it's the current user first
-  const ownerUser = user?.id === listOwnerId 
-    ? {
-        id: user.id,
-        name: user.user_metadata?.full_name || user.email || 'You',
-        avatar: user.user_metadata?.avatar_url || '/icon.svg'
-      }
-    : users.find(u => u.id === listOwnerId);
-
-  // Helper to get user details by ID
-  const getUserById = (userId: string) => {
-    if (userId === user?.id) {
-      return {
-        id: user.id,
-        name: user.user_metadata?.full_name || user.email || 'You',
-        avatar: user.user_metadata?.avatar_url || '/icon.svg'
-      };
-    }
-    return users.find(u => u.id === userId);
-  };
-
-  // Get effective permission for a user (considering pending changes)
-  const getEffectivePermission = (collaborator: Collaborator): 'view' | 'edit' | 'remove' | null => {
-    const pending = pendingChanges.get(collaborator.user_id);
+  // Get current permission for a user (from DB or pending changes)
+  const getUserPermission = (userId: string): 'none' | 'view' | 'edit' => {
+    // Check pending changes first
+    const pending = pendingChanges.get(userId);
     if (pending) {
-      if (pending.action === 'remove') return 'remove';
+      if (pending.action === 'remove') return 'none';
+      if (pending.action === 'add') return pending.permission!;
       if (pending.action === 'update') return pending.permission!;
     }
-    return collaborator.permission;
-  };
-
-  // Handle clicking on a user to add them
-  const handleAddUser = (userId: string) => {
-    const newChanges = new Map(pendingChanges);
-    newChanges.set(userId, { userId, action: 'add', permission: 'view' });
-    setPendingChanges(newChanges);
-  };
-
-  // Handle clicking on permission badge to cycle through states
-  const handlePermissionClick = (collaborator: Collaborator) => {
-    console.log('[ShareListModal] Clicked collaborator:', {
-      userId: collaborator.user_id,
-      currentPermission: collaborator.permission,
-      effective: getEffectivePermission(collaborator),
-      hasPending: pendingChanges.has(collaborator.user_id)
-    });
     
-    const newChanges = new Map(pendingChanges);
-    const current = getEffectivePermission(collaborator);
-    
-    if (current === 'view') {
-      // Viewer → Editor
-      newChanges.set(collaborator.user_id, { 
-        userId: collaborator.user_id, 
-        action: 'update', 
-        permission: 'edit' 
-      });
-    } else if (current === 'edit') {
-      // Editor → Remove
-      newChanges.set(collaborator.user_id, { 
-        userId: collaborator.user_id, 
-        action: 'remove' 
-      });
-    } else if (current === 'remove') {
-      // Remove → Viewer (revert to original or viewer if new)
-      newChanges.delete(collaborator.user_id);
+    // Check if user is a collaborator in DB
+    const collaborator = collaborators.find(c => c.user_id === userId);
+    if (collaborator) {
+      return collaborator.permission;
     }
     
-    console.log('[ShareListModal] New pending changes:', Array.from(newChanges.entries()));
-    setPendingChanges(newChanges);
+    // No access
+    return 'none';
   };
 
-  // Handle clicking badge for newly added users
-  const handleNewUserPermissionClick = (userId: string) => {
+  // Handle clicking on permission badge to cycle through states: None → Viewer → Editor → None
+  const handlePermissionToggle = (userId: string) => {
+    const currentPermission = getUserPermission(userId);
+    const collaborator = collaborators.find(c => c.user_id === userId);
     const newChanges = new Map(pendingChanges);
-    const current = pendingChanges.get(userId);
     
-    if (current?.permission === 'view') {
+    if (currentPermission === 'none') {
+      // None → Viewer (add)
+      newChanges.set(userId, { userId, action: 'add', permission: 'view' });
+    } else if (currentPermission === 'view') {
       // Viewer → Editor
-      newChanges.set(userId, { userId, action: 'add', permission: 'edit' });
-    } else if (current?.permission === 'edit') {
-      // Editor → Remove (just remove from pending)
-      newChanges.delete(userId);
+      if (collaborator) {
+        newChanges.set(userId, { userId, action: 'update', permission: 'edit' });
+      } else {
+        newChanges.set(userId, { userId, action: 'add', permission: 'edit' });
+      }
+    } else if (currentPermission === 'edit') {
+      // Editor → None (remove access)
+      if (collaborator) {
+        newChanges.set(userId, { userId, action: 'remove' });
+      } else {
+        // If not in DB yet, just remove from pending
+        newChanges.delete(userId);
+      }
     }
     
     setPendingChanges(newChanges);
@@ -213,121 +165,63 @@ export default function ShareListModal({
 
           <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[12px] py-1 px-1 flex flex-col gap-0.5">
             {/* Owner */}
-            {ownerUser && (
-              <div className="flex items-center justify-between h-6 px-[6px] py-1 rounded-lg">
-                <div className="flex items-center gap-1">
-                  <img
-                    src={ownerUser.avatar || '/icon.svg'}
-                    alt={ownerUser.name}
-                    className="w-4 h-4 rounded-full"
-                  />
-                  <p className="text-[12px] font-medium text-black">
-                    {ownerUser.name}
-                  </p>
-                </div>
-                <div className="px-1 py-0.5 rounded-[5px]">
-                  <p className="text-[10px] font-medium text-[#6A6A6A] tracking-[0.025px]">
-                    Owner
-                  </p>
-                </div>
+            <div className="flex items-center justify-between h-6 px-[6px] py-1 rounded-lg">
+              <div className="flex items-center gap-1">
+                <img
+                  src={user?.user_metadata?.avatar_url || '/icon.svg'}
+                  alt={user?.user_metadata?.full_name || 'You'}
+                  className="w-4 h-4 rounded-full"
+                />
+                <p className="text-[12px] font-medium text-black">
+                  {user?.user_metadata?.full_name || user?.email || 'You'}
+                </p>
               </div>
-            )}
+              <span className="text-[10px] font-medium text-[#6A6A6A] tracking-[0.025px]">
+                Owner
+              </span>
+            </div>
 
-            {/* Collaborators */}
-            {collaborators.map((collaborator) => {
-              const collaboratorUser = getUserById(collaborator.user_id);
-              const effectivePermission = getEffectivePermission(collaborator);
-              const isMarkedForRemoval = effectivePermission === 'remove';
+            {/* All Team Members */}
+            {teamMembers.map((member) => {
+              const permission = getUserPermission(member.id);
+              
+              // Determine badge text
+              let badgeText = 'None';
+              if (permission === 'view') badgeText = 'Viewer';
+              else if (permission === 'edit') badgeText = 'Editor';
               
               return (
                 <div
-                  key={collaborator.id}
-                  className={`flex items-center justify-between h-6 px-[6px] py-1 rounded-lg ${isMarkedForRemoval ? 'opacity-50' : ''}`}
+                  key={member.id}
+                  className="flex items-center justify-between h-6 px-[6px] py-1 rounded-lg"
                 >
                   <div className="flex items-center gap-1">
                     <img
-                      src={collaboratorUser?.avatar || '/icon.svg'}
-                      alt={collaboratorUser?.name || 'User'}
+                      src={member.avatar || '/icon.svg'}
+                      alt={member.name}
                       className="w-4 h-4 rounded-full"
                     />
                     <p className="text-[12px] font-medium text-black">
-                      {collaboratorUser?.name || 'Unknown User'}
+                      {member.name}
                     </p>
                   </div>
                   {user?.id === listOwnerId && (
                     <button
-                      onClick={() => handlePermissionClick(collaborator)}
+                      onClick={() => handlePermissionToggle(member.id)}
                       disabled={isSubmitting}
                       className="bg-[#f5f5f5] border border-[rgba(29,29,31,0.1)] rounded-[5px] px-1 py-[2px] text-[10px] font-medium text-black tracking-[0.025px] leading-none hover:bg-[#EEEEEE] cursor-pointer"
                     >
-                      {isMarkedForRemoval ? 'Remove' : effectivePermission === 'edit' ? 'Editor' : 'Viewer'}
+                      {badgeText}
                     </button>
                   )}
-                  {user?.id !== listOwnerId && (
+                  {user?.id !== listOwnerId && permission !== 'none' && (
                     <span className="bg-[#f5f5f5] border border-[rgba(29,29,31,0.1)] rounded-[5px] px-1 py-[2px] text-[10px] font-medium text-black tracking-[0.025px] leading-none">
-                      {collaborator.permission === 'edit' ? 'Editor' : 'Viewer'}
+                      {badgeText}
                     </span>
                   )}
                 </div>
               );
             })}
-
-            {/* Newly added users (pending) - only show if NOT already a collaborator */}
-            {Array.from(pendingChanges.entries())
-              .filter(([userId, change]) => 
-                change.action === 'add' && 
-                !collaborators.some(c => c.user_id === userId) // Don't show if already a collaborator
-              )
-              .map(([userId, change]) => {
-                const pendingUser = getUserById(userId);
-                return (
-                  <div
-                    key={userId}
-                    className="flex items-center justify-between h-6 px-[6px] py-1 rounded-lg bg-blue-50"
-                  >
-                    <div className="flex items-center gap-1">
-                      <img
-                        src={pendingUser?.avatar || '/icon.svg'}
-                        alt={pendingUser?.name || 'User'}
-                        className="w-4 h-4 rounded-full"
-                      />
-                      <p className="text-[12px] font-medium text-black">
-                        {pendingUser?.name || 'Unknown User'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleNewUserPermissionClick(userId)}
-                      disabled={isSubmitting}
-                      className="bg-[#f5f5f5] border border-[rgba(29,29,31,0.1)] rounded-[5px] px-1 py-[2px] text-[10px] font-medium text-black tracking-[0.025px] leading-none hover:bg-[#EEEEEE] cursor-pointer"
-                    >
-                      {change.permission === 'edit' ? 'Editor' : 'Viewer'}
-                    </button>
-                  </div>
-                );
-              })}
-
-            {/* Available users to add (only for owner) */}
-            {user?.id === listOwnerId && availableUsers.map((availableUser) => (
-              <div
-                key={availableUser.id}
-                className="flex items-center justify-between h-6 px-[6px] py-1 rounded-lg hover:bg-neutral-50 cursor-pointer"
-                onClick={() => handleAddUser(availableUser.id)}
-              >
-                <div className="flex items-center gap-1">
-                  <img
-                    src={availableUser.avatar || '/icon.svg'}
-                    alt={availableUser.name}
-                    className="w-4 h-4 rounded-full"
-                  />
-                  <p className="text-[12px] font-medium text-black">
-                    {availableUser.name}
-                  </p>
-                </div>
-                <span className="bg-[#f5f5f5] border border-[rgba(29,29,31,0.1)] rounded-[5px] px-1 py-[2px] text-[10px] font-medium text-black tracking-[0.025px] leading-none">
-                  Viewer
-                </span>
-              </div>
-            ))}
           </div>
         </div>
 
@@ -336,7 +230,7 @@ export default function ShareListModal({
           <button
             onClick={onClose}
             disabled={isSubmitting}
-            className="bg-white border border-[rgba(29,29,31,0.1)] h-6 px-2 py-1 rounded-[7px] hover:bg-neutral-50 transition-colors"
+            className="bg-white border border-[rgba(29,29,31,0.1)] h-6 px-2 py-0 rounded-[7px] hover:bg-neutral-50 transition-colors"
           >
             <p className="text-[12px] font-medium text-black">Cancel</p>
           </button>

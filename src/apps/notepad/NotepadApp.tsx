@@ -250,7 +250,7 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
           onCreateList={() => setShowNewListModal(true)}
           onCreateNote={handleCreateNote}
         />
-        <div className="flex-1 flex items-center justify-center ml-[264px]">
+        <div className="flex-1 flex items-center justify-center ml-[304px]">
           <p className="text-sm font-medium text-neutral-500">No lists or notes yet</p>
         </div>
         <NewListModal
@@ -276,7 +276,7 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
         onCreateNote={handleCreateNote}
       />
 
-      <div className="ml-[264px] flex-1">
+      <div className="ml-[304px] flex-1">
         {/* Lists View */}
         {selectedType === "list" && selectedList && (
           <ListsView

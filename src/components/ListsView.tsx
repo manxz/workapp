@@ -113,42 +113,82 @@ export default function ListsView({
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Collaborator Avatars - only show if there are collaborators */}
-          {collaborators.length > 0 && (
-            <div className="flex items-center pr-0 pl-0">
-              {collaborators.slice(0, 3).map((collaborator, index) => {
-                const collaboratorUser = users.find(u => u.id === collaborator.user_id);
-                return (
+          {/* Owner + Collaborator Avatars - always show owner if list is shared */}
+          {isShared && (() => {
+            const ownerUser = users.find(u => u.id === listOwnerId);
+            const validCollaborators = collaborators.filter(c => users.find(u => u.id === c.user_id));
+            const totalCount = (ownerUser ? 1 : 0) + validCollaborators.length;
+            const displayLimit = 3;
+            
+            return totalCount > 0 && (
+              <div className="flex items-center pr-0 pl-0">
+                {/* Owner Avatar - always first */}
+                {ownerUser && (
                   <div
-                    key={collaborator.id}
-                    className="relative group border border-neutral-100 rounded-full w-6 h-6 overflow-hidden"
-                    style={{ marginRight: index < Math.min(collaborators.length, 3) - 1 ? '-4px' : '0' }}
+                    key={`owner-${listOwnerId}`}
+                    className="relative group"
+                    style={{ marginRight: totalCount > 1 ? '-4px' : '0' }}
                   >
-                    {collaboratorUser?.avatar ? (
-                      <img
-                        src={collaboratorUser.avatar}
-                        alt={collaboratorUser.name || 'Collaborator'}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-[10px] font-semibold text-neutral-600">
-                        {(collaboratorUser?.name || 'U').charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <div className="border border-neutral-100 rounded-full w-6 h-6 overflow-hidden">
+                      {ownerUser.avatar ? (
+                        <img
+                          src={ownerUser.avatar}
+                          alt={ownerUser.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-[10px] font-semibold text-neutral-600">
+                          {ownerUser.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
                     {/* Tooltip */}
-                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
-                      {collaboratorUser?.name || 'Collaborator'}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      {ownerUser.name} (Owner)
                     </div>
                   </div>
-                );
-              })}
-              {collaborators.length > 3 && (
-                <div className="ml-1 text-[12px] font-medium text-neutral-500">
-                  +{collaborators.length - 3}
-                </div>
-              )}
-            </div>
-          )}
+                )}
+                
+                {/* Collaborator Avatars */}
+                {validCollaborators.slice(0, displayLimit - 1).map((collaborator, index) => {
+                  const collaboratorUser = users.find(u => u.id === collaborator.user_id)!;
+                  const isLast = index === Math.min(validCollaborators.length, displayLimit - 1) - 1;
+                  return (
+                    <div
+                      key={collaborator.id}
+                      className="relative group"
+                      style={{ marginRight: !isLast ? '-4px' : '0' }}
+                    >
+                      <div className="border border-neutral-100 rounded-full w-6 h-6 overflow-hidden">
+                        {collaboratorUser.avatar ? (
+                          <img
+                            src={collaboratorUser.avatar}
+                            alt={collaboratorUser.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-[10px] font-semibold text-neutral-600">
+                            {collaboratorUser.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      {/* Tooltip */}
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
+                        {collaboratorUser.name}
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* +N indicator if more than display limit */}
+                {totalCount > displayLimit && (
+                  <div className="ml-1 text-[12px] font-medium text-neutral-500">
+                    +{totalCount - displayLimit}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Share List Button */}
           {isCurrentUserOwner && (

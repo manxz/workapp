@@ -33,6 +33,7 @@ export function useListCollaborators(listId?: string) {
         return;
       }
 
+      console.log('[useListCollaborators] Fetched collaborators for list', id, ':', data);
       setCollaborators(data || []);
     } catch (error) {
       console.error('[useListCollaborators] Unexpected error:', error);

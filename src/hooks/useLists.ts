@@ -38,19 +38,11 @@ export function useLists() {
     }
 
     try {
-      console.log('[useLists] Fetching lists for user:', user?.id);
-      
       // First, fetch lists only (without nested relation)
       const { data, error } = await supabase
         .from('lists')
         .select('*')
         .order('created_at', { ascending: true });
-
-      console.log('[useLists] Query result:', { 
-        dataCount: data?.length, 
-        error: error ? JSON.stringify(error, null, 2) : null,
-        hasError: !!error 
-      });
 
       if (error) {
         console.error('Error fetching lists:', error);
@@ -132,7 +124,6 @@ export function useLists() {
           table: 'lists',
         },
         () => {
-          // Re-fetch to get updated counts
           fetchLists();
         }
       )
@@ -144,8 +135,19 @@ export function useLists() {
           table: 'list_items',
         },
         () => {
-          // Re-fetch lists to update counts when items change
           // Small delay to ensure database operation completes
+          setTimeout(() => fetchLists(), 100);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'list_collaborators',
+        },
+        () => {
+          // Re-fetch lists to update shared status when collaborators change
           setTimeout(() => fetchLists(), 100);
         }
       )

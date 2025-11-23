@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, memo } from "react";
-import { Plus, CaretDown } from "@phosphor-icons/react";
+import { Plus, CaretDown, Users } from "@phosphor-icons/react";
 import ProgressIndicator from "./ProgressIndicator";
 import { Note } from "@/hooks/useNotes";
 
@@ -71,14 +71,12 @@ const ListItem = memo(({
       }`}
       onClick={() => onSelect(list)}
     >
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-1">
         <p className={`text-[13px] text-black ${isSelected ? "font-semibold" : "font-medium"}`}>
           {list.name}
         </p>
         {list.isShared && (
-          <span className="bg-[#f5f5f5] border border-[rgba(29,29,31,0.1)] rounded-[5px] px-1 py-[2px] text-[10px] font-medium text-black tracking-[0.025px] leading-none">
-            Shared
-          </span>
+          <Users size={14} weight="fill" className="text-[#343330] flex-shrink-0 translate-y-[0.5px]" />
         )}
       </div>
       <div className="flex items-center gap-[2px]">
@@ -159,7 +157,7 @@ function NotepadSidebar({
   }, []);
 
   return (
-    <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen w-[200px] py-4 fixed left-16 top-0 overflow-y-auto">
+    <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen w-[240px] py-4 fixed left-16 top-0 overflow-y-auto">
       <div className="flex flex-col gap-2">
         {/* Header */}
         <div className="flex items-center justify-between pl-4 py-1.5 h-6">

@@ -79,6 +79,8 @@ export function useListItems(listId?: string) {
   useEffect(() => {
     if (!user || !listId) return;
 
+    console.log('[useListItems] Setting up real-time subscription for list:', listId);
+
     const channel = supabase
       .channel(`list_items:${listId}`)
       .on(
@@ -90,6 +92,8 @@ export function useListItems(listId?: string) {
           filter: `list_id=eq.${listId}`,
         },
         (payload) => {
+          console.log('[useListItems] Received real-time event:', payload.eventType, payload);
+          
           if (payload.eventType === 'INSERT') {
             setItems((prev) => [...prev, payload.new as ListItem]);
           } else if (payload.eventType === 'UPDATE') {
@@ -103,9 +107,12 @@ export function useListItems(listId?: string) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[useListItems] Subscription status:', status);
+      });
 
     return () => {
+      console.log('[useListItems] Cleaning up subscription for list:', listId);
       supabase.removeChannel(channel);
     };
   }, [user, listId]);
