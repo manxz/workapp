@@ -180,8 +180,8 @@ export function useLists() {
           updated_at: new Date().toISOString(),
         };
 
-        // Optimistically add to UI
-        setLists((prev) => [...prev, optimisticList]);
+        // Optimistically add to UI (prepend to maintain desc order)
+        setLists((prev) => [optimisticList, ...prev]);
 
         const { data, error } = await supabase
           .from('lists')
