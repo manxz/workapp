@@ -88,6 +88,68 @@ export default function ListsView({
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const pastedText = e.clipboardData.getData('text');
     
+    // Split by newlines
+    const lines = pastedText.split(/\r?\n/).filter(line => line.trim().length > 0);
+    
+    // Check if this looks like a numbered list with bullet points
+    const hasNumberedItems = lines.some(line => /^\d+\.\s+/.test(line.trim()));
+    
+    if (hasNumberedItems) {
+      e.preventDefault();
+      
+      // Group lines: numbered items with their associated bullet points
+      const items: { content: string; notes: string }[] = [];
+      let currentItem: { content: string; notes: string[] } | null = null;
+      
+      lines.forEach(line => {
+        const trimmedLine = line.trim();
+        
+        // Check if this is a numbered item (e.g., "1. Item")
+        const numberedMatch = trimmedLine.match(/^\d+\.\s+(.+)$/);
+        if (numberedMatch) {
+          // Save previous item if exists
+          if (currentItem) {
+            items.push({
+              content: currentItem.content,
+              notes: currentItem.notes.join('\n')
+            });
+          }
+          // Start new item
+          currentItem = {
+            content: numberedMatch[1].trim(),
+            notes: []
+          };
+        } 
+        // Check if this is a bullet point (-, *, •)
+        else if (/^[-*•]\s+/.test(trimmedLine)) {
+          const bulletContent = trimmedLine.replace(/^[-*•]\s+/, '').trim();
+          if (currentItem) {
+            currentItem.notes.push(bulletContent);
+          }
+        }
+        // Any other line gets added to current item's notes
+        else if (currentItem && trimmedLine) {
+          currentItem.notes.push(trimmedLine);
+        }
+      });
+      
+      // Don't forget the last item
+      if (currentItem) {
+        items.push({
+          content: currentItem.content,
+          notes: currentItem.notes.join('\n')
+        });
+      }
+      
+      // Create all items with their notes
+      items.forEach(item => {
+        onCreateItem(item.content, item.notes || undefined);
+      });
+      
+      setNewItemText("");
+      return;
+    }
+    
     // Helper to clean up list item text
     const cleanItem = (text: string): string => {
       return text
@@ -98,15 +160,14 @@ export default function ListsView({
         .trim();
     };
     
-    // Split by newlines first
-    const lines = pastedText.split(/\r?\n/).map(line => cleanItem(line)).filter(line => line.length > 0);
+    // Clean all lines
+    const cleanedLines = lines.map(line => cleanItem(line)).filter(line => line.length > 0);
     
     // If multiple lines, create multiple items
-    if (lines.length > 1) {
+    if (cleanedLines.length > 1) {
       e.preventDefault();
       
-      // Create all items
-      lines.forEach(line => {
+      cleanedLines.forEach(line => {
         onCreateItem(line, undefined);
       });
       
@@ -115,8 +176,8 @@ export default function ListsView({
     }
     
     // If single line, check for comma-separated items
-    if (lines.length === 1) {
-      const commaSeparated = lines[0].split(',').map(item => item.trim()).filter(item => item.length > 0);
+    if (cleanedLines.length === 1) {
+      const commaSeparated = cleanedLines[0].split(',').map(item => item.trim()).filter(item => item.length > 0);
       
       // If multiple comma-separated items (and they're reasonably short), create multiple
       if (commaSeparated.length > 1 && commaSeparated.every(item => item.length < 100)) {
