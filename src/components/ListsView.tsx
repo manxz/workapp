@@ -56,6 +56,16 @@ export default function ListsView({
   const [editingNotes, setEditingNotes] = useState("");
   const newItemInputRef = useRef<HTMLInputElement>(null);
   const editingContainerRef = useRef<HTMLDivElement>(null);
+  const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea as content changes
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setEditingNotes(e.target.value);
+    // Reset height to auto to get the correct scrollHeight
+    e.target.style.height = 'auto';
+    // Set height to scrollHeight to fit content
+    e.target.style.height = `${e.target.scrollHeight}px`;
+  };
 
   const isCurrentUserOwner = user?.id === listOwnerId;
 
@@ -199,6 +209,13 @@ export default function ListsView({
     setEditingItemId(item.id);
     setEditingText(item.content);
     setEditingNotes(item.notes || "");
+    // Auto-resize textarea on next tick
+    setTimeout(() => {
+      if (notesTextareaRef.current) {
+        notesTextareaRef.current.style.height = 'auto';
+        notesTextareaRef.current.style.height = `${notesTextareaRef.current.scrollHeight}px`;
+      }
+    }, 0);
   };
 
   const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, itemId: string) => {
@@ -407,18 +424,19 @@ export default function ListsView({
                   {/* Notes input when editing */}
                   <div className="pl-[21px]">
                     <textarea
+                      ref={notesTextareaRef}
                       value={editingNotes}
-                      onChange={(e) => setEditingNotes(e.target.value)}
+                      onChange={handleNotesChange}
                       onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                       onBlur={(e) => handleEditBlur(item.id, e)}
                       placeholder="Notes"
                       wrap="soft"
                       className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none overflow-wrap-anywhere"
-                      style={{ minHeight: '20px', height: 'auto', overflowY: 'hidden' }}
+                      style={{ minHeight: '20px', overflowY: 'hidden' }}
                     />
                   </div>
                 </div>
-            ) : (
+              ) : (
               // View mode - show content with doc icon if notes exist
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -490,14 +508,15 @@ export default function ListsView({
                   {/* Notes input when editing */}
                   <div className="pl-[21px]">
                     <textarea
+                      ref={notesTextareaRef}
                       value={editingNotes}
-                      onChange={(e) => setEditingNotes(e.target.value)}
+                      onChange={handleNotesChange}
                       onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                       onBlur={(e) => handleEditBlur(item.id, e)}
                       placeholder="Notes"
                       wrap="soft"
                       className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none overflow-wrap-anywhere"
-                      style={{ minHeight: '20px', height: 'auto', overflowY: 'hidden' }}
+                      style={{ minHeight: '20px', overflowY: 'hidden' }}
                     />
                   </div>
                 </div>
