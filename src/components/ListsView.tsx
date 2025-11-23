@@ -4,6 +4,9 @@ import { useState, KeyboardEvent, useRef, useEffect } from "react";
 import { Trash, Eye, EyeSlash } from "@phosphor-icons/react";
 import ProgressIndicator from "./ProgressIndicator";
 import Checkbox from "./Checkbox";
+import { Collaborator } from "@/hooks/useListCollaborators";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUsers } from "@/hooks/useUsers";
 
 type ListItem = {
   id: string;
@@ -12,35 +15,45 @@ type ListItem = {
 };
 
 type ListsViewProps = {
+  listId: string;
   listName: string;
   items: ListItem[];
   uncompletedCount: number;
   completedCount: number;
+  isShared: boolean;
+  collaborators: Collaborator[];
   onToggleItem: (itemId: string) => void;
   onCreateItem: (content: string) => void;
   onUpdateItem: (itemId: string, content: string) => void;
   onDeleteList: () => void;
-  onShareList?: () => void; // New: callback to open share modal
-  collaboratorAvatars?: Array<{ id: string; name: string; avatar?: string }>; // New: collaborator data
+  onShareList: () => void;
+  listOwnerId: string;
 };
 
 export default function ListsView({
+  listId,
   listName,
   items,
   uncompletedCount,
   completedCount,
+  isShared,
+  collaborators,
   onToggleItem,
   onCreateItem,
   onUpdateItem,
   onDeleteList,
   onShareList,
-  collaboratorAvatars = [],
+  listOwnerId,
 }: ListsViewProps) {
+  const { user } = useAuth();
+  const { users } = useUsers();
   const [newItemText, setNewItemText] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const newItemInputRef = useRef<HTMLInputElement>(null);
+
+  const isCurrentUserOwner = user?.id === listOwnerId;
 
   // Auto-focus the new item input when the list changes (new list selected or created)
   useEffect(() => {
@@ -100,39 +113,45 @@ export default function ListsView({
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Collaborator Avatars */}
-          {collaboratorAvatars.length > 0 && (
+          {/* Collaborator Avatars - only show if there are collaborators */}
+          {collaborators.length > 0 && (
             <div className="flex items-center pr-0 pl-0">
-              {collaboratorAvatars.slice(0, 3).map((collaborator, index) => (
-                <div
-                  key={collaborator.id}
-                  className="border border-neutral-100 rounded-full w-6 h-6 overflow-hidden"
-                  style={{ marginRight: index < Math.min(collaboratorAvatars.length, 3) - 1 ? '-4px' : '0' }}
-                  title={collaborator.name}
-                >
-                  {collaborator.avatar ? (
-                    <img
-                      src={collaborator.avatar}
-                      alt={collaborator.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-[10px] font-semibold text-neutral-600">
-                      {collaborator.name.charAt(0).toUpperCase()}
+              {collaborators.slice(0, 3).map((collaborator, index) => {
+                const collaboratorUser = users.find(u => u.id === collaborator.user_id);
+                return (
+                  <div
+                    key={collaborator.id}
+                    className="relative group border border-neutral-100 rounded-full w-6 h-6 overflow-hidden"
+                    style={{ marginRight: index < Math.min(collaborators.length, 3) - 1 ? '-4px' : '0' }}
+                  >
+                    {collaboratorUser?.avatar ? (
+                      <img
+                        src={collaboratorUser.avatar}
+                        alt={collaboratorUser.name || 'Collaborator'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-neutral-300 flex items-center justify-center text-[10px] font-semibold text-neutral-600">
+                        {(collaboratorUser?.name || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    {/* Tooltip */}
+                    <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
+                      {collaboratorUser?.name || 'Collaborator'}
                     </div>
-                  )}
-                </div>
-              ))}
-              {collaboratorAvatars.length > 3 && (
+                  </div>
+                );
+              })}
+              {collaborators.length > 3 && (
                 <div className="ml-1 text-[12px] font-medium text-neutral-500">
-                  +{collaboratorAvatars.length - 3}
+                  +{collaborators.length - 3}
                 </div>
               )}
             </div>
           )}
 
           {/* Share List Button */}
-          {onShareList && (
+          {isCurrentUserOwner && (
             <button
               onClick={onShareList}
               className="bg-black border border-[rgba(29,29,31,0.2)] flex items-center gap-1 h-6 px-2 rounded-[7px] hover:bg-neutral-800 transition-colors"

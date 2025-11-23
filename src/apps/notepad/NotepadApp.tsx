@@ -5,9 +5,11 @@ import dynamic from "next/dynamic";
 import ListsView from "@/components/ListsView";
 import NewListModal from "@/components/NewListModal";
 import ConfirmationModal from "@/components/ConfirmationModal";
+import ShareListModal from "@/components/ShareListModal";
 import { type List as ListType } from "@/hooks/useLists";
 import { useListItems } from "@/hooks/useListItems";
 import { useNotes, Note } from "@/hooks/useNotes";
+import { useListCollaborators } from "@/hooks/useListCollaborators";
 
 const NotepadSidebar = dynamic(() => import("@/components/NotepadSidebar"), { ssr: false });
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), { ssr: false });
@@ -17,6 +19,8 @@ type List = {
   name: string;
   completed: number;
   total: number;
+  isShared?: boolean;
+  owner_id: string;
 };
 
 interface NotepadAppProps {
@@ -33,9 +37,18 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
   const [showNewListModal, setShowNewListModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteNoteModal, setShowDeleteNoteModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // Notes hook
   const { notes, loading: notesLoading, createNote, updateNote, deleteNote } = useNotes();
+
+  // Collaborators hook for selected list
+  const {
+    collaborators,
+    addCollaborator,
+    removeCollaborator,
+    updatePermission
+  } = useListCollaborators(selectedListId);
 
   // Fetch items for the selected list
   const {
@@ -60,6 +73,8 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
           name: list.name,
           completed: completedItems.length,
           total: items.length,
+          isShared: list.isShared || false,
+          owner_id: list.owner_id,
         };
       }
       // Use database counts for other lists or while loading
@@ -68,6 +83,8 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
         name: list.name,
         completed: list.completed_count || 0,
         total: list.total_count || 0,
+        isShared: list.isShared || false,
+        owner_id: list.owner_id,
       };
     });
   }, [rawLists, selectedListId, items, completedItems, itemsLoading]);
@@ -263,14 +280,19 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
         {/* Lists View */}
         {selectedType === "list" && selectedList && (
           <ListsView
+            listId={selectedList.id}
             listName={selectedList.name}
             items={items}
             uncompletedCount={itemsLoading ? (selectedList.total - selectedList.completed) : uncompletedItems.length}
             completedCount={itemsLoading ? selectedList.completed : completedItems.length}
+            isShared={selectedList.isShared || false}
+            collaborators={collaborators}
             onToggleItem={handleToggleItem}
             onCreateItem={handleCreateItem}
             onUpdateItem={handleUpdateItem}
             onDeleteList={() => setShowDeleteModal(true)}
+            onShareList={() => setShowShareModal(true)}
+            listOwnerId={selectedList.owner_id}
           />
         )}
 
@@ -310,6 +332,17 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
         description="This will permanently delete this note. This action cannot be undone."
         confirmLabel="Delete note"
         confirmVariant="danger"
+      />
+
+      <ShareListModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        listName={selectedList?.name || ""}
+        listOwnerId={selectedList?.owner_id || ""}
+        collaborators={collaborators}
+        onAddCollaborator={addCollaborator}
+        onRemoveCollaborator={removeCollaborator}
+        onUpdatePermission={updatePermission}
       />
     </>
   );

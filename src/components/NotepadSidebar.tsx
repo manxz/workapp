@@ -76,11 +76,9 @@ const ListItem = memo(({
           {list.name}
         </p>
         {list.isShared && (
-          <div className="bg-[#f5f5f5] border border-[rgba(29,29,31,0.1)] px-1 py-0.5 rounded-[5px]">
-            <p className="text-[10px] font-medium text-black tracking-[0.025px]">
-              Shared
-            </p>
-          </div>
+          <span className="bg-[#f5f5f5] border border-[rgba(29,29,31,0.1)] rounded-[5px] px-1 py-[2px] text-[10px] font-medium text-black tracking-[0.025px] leading-none">
+            Shared
+          </span>
         )}
       </div>
       <div className="flex items-center gap-[2px]">

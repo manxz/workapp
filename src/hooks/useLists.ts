@@ -6,11 +6,12 @@ export type List = {
   id: string;
   name: string;
   user_id: string;
+  owner_id: string;
   created_at: string;
   updated_at: string;
   completed_count?: number;
   total_count?: number;
-  isShared?: boolean; // New: indicates if list has collaborators
+  isShared?: boolean;
 };
 
 /**
@@ -49,16 +50,30 @@ export function useLists() {
       if (error) {
         console.error('Error fetching lists:', error);
       } else if (data) {
+        // Fetch collaborator counts separately
+        const listIds = data.map((list: any) => list.id);
+        const { data: collabData } = await supabase
+          .from('list_collaborators')
+          .select('list_id')
+          .in('list_id', listIds);
+
+        // Group collaborators by list_id
+        const collabCounts = (collabData || []).reduce((acc: Record<string, number>, collab: any) => {
+          acc[collab.list_id] = (acc[collab.list_id] || 0) + 1;
+          return acc;
+        }, {});
+
         // Transform data to include counts and shared status
         const listsWithCounts = data.map((list: any) => ({
           id: list.id,
           name: list.name,
           user_id: list.user_id,
+          owner_id: list.owner_id,
           created_at: list.created_at,
           updated_at: list.updated_at,
           total_count: list.list_items?.length || 0,
           completed_count: list.list_items?.filter((item: any) => item.completed).length || 0,
-          isShared: false, // Temporary: will be populated after migration
+          isShared: (collabCounts[list.id] || 0) > 0,
         }));
         setLists(listsWithCounts);
       }
@@ -132,6 +147,7 @@ export function useLists() {
           id: `temp-${Date.now()}`,
           name,
           user_id: user.id,
+          owner_id: user.id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -144,6 +160,7 @@ export function useLists() {
           .insert({
             name,
             user_id: user.id,
+            owner_id: user.id,
           })
           .select()
           .single();

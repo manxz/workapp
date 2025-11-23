@@ -9,10 +9,6 @@ export type Collaborator = {
   permission: 'view' | 'edit';
   added_by: string;
   created_at: string;
-  // Joined user data
-  user_name?: string;
-  user_avatar?: string;
-  user_email?: string;
 };
 
 export function useListCollaborators(listId?: string) {
@@ -28,36 +24,19 @@ export function useListCollaborators(listId?: string) {
     try {
       const { data, error } = await supabase
         .from('list_collaborators')
-        .select(`
-          *,
-          profiles!list_collaborators_user_id_fkey (
-            full_name,
-            avatar_url,
-            email
-          )
-        `)
+        .select('*')
         .eq('list_id', id);
 
       if (error) {
         console.error('[useListCollaborators] Error fetching collaborators:', error);
+        setCollaborators([]);
         return;
       }
 
-      const formattedCollaborators: Collaborator[] = (data || []).map((collab: any) => ({
-        id: collab.id,
-        list_id: collab.list_id,
-        user_id: collab.user_id,
-        permission: collab.permission,
-        added_by: collab.added_by,
-        created_at: collab.created_at,
-        user_name: collab.profiles?.full_name || undefined,
-        user_avatar: collab.profiles?.avatar_url || undefined,
-        user_email: collab.profiles?.email || undefined,
-      }));
-
-      setCollaborators(formattedCollaborators);
+      setCollaborators(data || []);
     } catch (error) {
       console.error('[useListCollaborators] Unexpected error:', error);
+      setCollaborators([]);
     } finally {
       setLoading(false);
     }
@@ -65,7 +44,7 @@ export function useListCollaborators(listId?: string) {
 
   // Add a collaborator
   const addCollaborator = useCallback(async (userId: string, permission: 'view' | 'edit' = 'view') => {
-    if (!user || !listId) return false;
+    if (!user || !listId) return { success: false, error: 'User or list not defined' };
 
     try {
       const { error } = await supabase
@@ -79,21 +58,21 @@ export function useListCollaborators(listId?: string) {
 
       if (error) {
         console.error('[useListCollaborators] Error adding collaborator:', error);
-        return false;
+        return { success: false, error: error.message };
       }
 
       // Refresh collaborators
       await fetchCollaborators(listId);
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('[useListCollaborators] Unexpected error adding collaborator:', error);
-      return false;
+      return { success: false, error: error.message || 'Unknown error' };
     }
   }, [user, listId, fetchCollaborators]);
 
   // Remove a collaborator
   const removeCollaborator = useCallback(async (collaboratorId: string) => {
-    if (!user || !listId) return false;
+    if (!user || !listId) return { success: false, error: 'User or list not defined' };
 
     try {
       const { error } = await supabase
@@ -103,21 +82,21 @@ export function useListCollaborators(listId?: string) {
 
       if (error) {
         console.error('[useListCollaborators] Error removing collaborator:', error);
-        return false;
+        return { success: false, error: error.message };
       }
 
       // Refresh collaborators
       await fetchCollaborators(listId);
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('[useListCollaborators] Unexpected error removing collaborator:', error);
-      return false;
+      return { success: false, error: error.message || 'Unknown error' };
     }
   }, [user, listId, fetchCollaborators]);
 
   // Update collaborator permission
   const updatePermission = useCallback(async (collaboratorId: string, permission: 'view' | 'edit') => {
-    if (!user || !listId) return false;
+    if (!user || !listId) return { success: false, error: 'User or list not defined' };
 
     try {
       const { error } = await supabase
@@ -127,15 +106,15 @@ export function useListCollaborators(listId?: string) {
 
       if (error) {
         console.error('[useListCollaborators] Error updating permission:', error);
-        return false;
+        return { success: false, error: error.message };
       }
 
       // Refresh collaborators
       await fetchCollaborators(listId);
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('[useListCollaborators] Unexpected error updating permission:', error);
-      return false;
+      return { success: false, error: error.message || 'Unknown error' };
     }
   }, [user, listId, fetchCollaborators]);
 
