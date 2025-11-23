@@ -478,28 +478,29 @@ export default function ListsView({
 
         {/* Uncompleted Items */}
         {uncompletedItems.map((item) => (
-          <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"} style={{ transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div key={item.id} style={{ transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
             {editingItemId === item.id ? (
-              // Editing mode - checkbox inside container with adjusted padding
-              <div 
-                ref={editingContainerRef}
-                className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] pt-[6px] pb-2 px-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] animate-[scaleIn_0.3s_ease-out]"
-              >
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    state="default"
-                    onClick={() => onToggleItem(item.id)}
-                  />
-                  <input
-                    type="text"
-                    value={editingText}
-                    onChange={(e) => setEditingText(e.target.value)}
-                    onKeyDown={(e) => handleEditKeyDown(e, item.id)}
-                    onBlur={(e) => handleEditBlur(item.id, e)}
-                    autoFocus
-                    className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent leading-[normal]"
-                  />
-                </div>
+              // Editing mode - match Figma with px-[8px] wrapper and p-[8px] inner container
+              <div className="px-2 py-1">
+                <div 
+                  ref={editingContainerRef}
+                  className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] animate-scale-in"
+                >
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      state="default"
+                      onClick={() => onToggleItem(item.id)}
+                    />
+                    <input
+                      type="text"
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                      onBlur={(e) => handleEditBlur(item.id, e)}
+                      autoFocus
+                      className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent leading-[normal]"
+                    />
+                  </div>
                   {/* Notes input when editing */}
                   <div className="pl-[21px]">
                     <textarea
@@ -515,24 +516,27 @@ export default function ListsView({
                     />
                   </div>
                 </div>
+              </div>
               ) : (
               // View mode - show content with doc icon if notes exist
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  state="default"
-                  onClick={() => onToggleItem(item.id)}
-                />
-                <div className="flex items-center gap-1 flex-1">
-                  <p
-                    className={`text-[13px] font-medium text-black ${editingItemId ? 'cursor-pointer' : 'cursor-text'}`}
-                    onDoubleClick={() => handleDoubleClick(item)}
-                    onClick={() => handleSingleClick(item)}
-                  >
-                    {item.content}
-                  </p>
-                  {item.notes && item.notes.trim() && (
-                    <Article size={12} weight="regular" className="text-[#6A6A6A] opacity-60 flex-shrink-0" />
-                  )}
+              <div className="px-4 py-1">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    state="default"
+                    onClick={() => onToggleItem(item.id)}
+                  />
+                  <div className="flex items-center gap-1 flex-1">
+                    <p
+                      className={`text-[13px] font-medium text-black ${editingItemId ? 'cursor-pointer' : 'cursor-text'}`}
+                      onDoubleClick={() => handleDoubleClick(item)}
+                      onClick={() => handleSingleClick(item)}
+                    >
+                      {item.content}
+                    </p>
+                    {item.notes && item.notes.trim() && (
+                      <Article size={12} weight="regular" className="text-[#6A6A6A] opacity-60 flex-shrink-0" />
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -563,61 +567,65 @@ export default function ListsView({
         {/* Completed Items */}
         {showCompleted &&
           completedItems.map((item) => (
-            <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"} style={{ transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+            <div key={item.id} style={{ transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
               {editingItemId === item.id ? (
-                // Editing mode - checkbox inside container with adjusted padding
-                <div 
-                  ref={editingContainerRef}
-                  className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] pt-[6px] pb-2 px-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] animate-[scaleIn_0.3s_ease-out]"
-                >
+                // Editing mode - match Figma with px-[8px] wrapper and p-[8px] inner container
+                <div className="px-2 py-1">
+                  <div 
+                    ref={editingContainerRef}
+                    className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] animate-scale-in"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        state="filled"
+                        onClick={() => onToggleItem(item.id)}
+                      />
+                      <input
+                        type="text"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                        onBlur={(e) => handleEditBlur(item.id, e)}
+                        autoFocus
+                        className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent leading-[normal]"
+                      />
+                    </div>
+                    {/* Notes input when editing */}
+                    <div className="pl-[21px]">
+                      <textarea
+                        ref={notesTextareaRef}
+                        value={editingNotes}
+                        onChange={handleNotesChange}
+                        onKeyDown={(e) => handleEditKeyDown(e, item.id)}
+                        onBlur={(e) => handleEditBlur(item.id, e)}
+                        placeholder="Notes"
+                        wrap="soft"
+                        className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none overflow-wrap-anywhere"
+                        style={{ minHeight: '20px', overflowY: 'hidden' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                // View mode - show content with doc icon if notes exist
+                <div className="px-4 py-1">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       state="filled"
                       onClick={() => onToggleItem(item.id)}
                     />
-                    <input
-                      type="text"
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      onKeyDown={(e) => handleEditKeyDown(e, item.id)}
-                      onBlur={(e) => handleEditBlur(item.id, e)}
-                      autoFocus
-                      className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent leading-[normal]"
-                    />
-                  </div>
-                  {/* Notes input when editing */}
-                  <div className="pl-[21px]">
-                    <textarea
-                      ref={notesTextareaRef}
-                      value={editingNotes}
-                      onChange={handleNotesChange}
-                      onKeyDown={(e) => handleEditKeyDown(e, item.id)}
-                      onBlur={(e) => handleEditBlur(item.id, e)}
-                      placeholder="Notes"
-                      wrap="soft"
-                      className="w-full text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal] resize-none overflow-wrap-anywhere"
-                      style={{ minHeight: '20px', overflowY: 'hidden' }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                // View mode - show content with doc icon if notes exist
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    state="filled"
-                    onClick={() => onToggleItem(item.id)}
-                  />
-                  <div className="flex items-center gap-1 flex-1">
-                    <p
-                      className={`text-[13px] font-medium text-black ${editingItemId ? 'cursor-pointer' : 'cursor-text'}`}
-                      onDoubleClick={() => handleDoubleClick(item)}
-                      onClick={() => handleSingleClick(item)}
-                    >
-                      {item.content}
-                    </p>
-                    {item.notes && item.notes.trim() && (
-                      <Article size={12} weight="regular" className="text-[#6A6A6A] opacity-60 flex-shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1 flex-1">
+                      <p
+                        className={`text-[13px] font-medium text-black ${editingItemId ? 'cursor-pointer' : 'cursor-text'}`}
+                        onDoubleClick={() => handleDoubleClick(item)}
+                        onClick={() => handleSingleClick(item)}
+                      >
+                        {item.content}
+                      </p>
+                      {item.notes && item.notes.trim() && (
+                        <Article size={12} weight="regular" className="text-[#6A6A6A] opacity-60 flex-shrink-0" />
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
