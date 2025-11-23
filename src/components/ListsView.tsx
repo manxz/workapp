@@ -265,19 +265,22 @@ export default function ListsView({
   };
 
   const handleSingleClick = (item: ListItem) => {
-    // If another item is already being edited, open this one
-    if (editingItemId && editingItemId !== item.id) {
-      setEditingItemId(item.id);
-      setEditingText(item.content);
-      setEditingNotes(item.notes || "");
-      // Auto-resize textarea on next tick
-      setTimeout(() => {
-        if (notesTextareaRef.current) {
-          notesTextareaRef.current.style.height = 'auto';
-          notesTextareaRef.current.style.height = `${notesTextareaRef.current.scrollHeight}px`;
-        }
-      }, 0);
+    // If any item is already being edited, single click opens another one
+    if (editingItemId) {
+      if (editingItemId !== item.id) {
+        setEditingItemId(item.id);
+        setEditingText(item.content);
+        setEditingNotes(item.notes || "");
+        // Auto-resize textarea on next tick
+        setTimeout(() => {
+          if (notesTextareaRef.current) {
+            notesTextareaRef.current.style.height = 'auto';
+            notesTextareaRef.current.style.height = `${notesTextareaRef.current.scrollHeight}px`;
+          }
+        }, 0);
+      }
     }
+    // If no item is being edited, require double-click (do nothing on single click)
   };
 
   const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, itemId: string) => {
@@ -508,7 +511,7 @@ export default function ListsView({
                 />
                 <div className="flex items-center gap-1 flex-1">
                   <p
-                    className="text-[13px] font-medium text-black cursor-text"
+                    className={`text-[13px] font-medium text-black ${editingItemId ? 'cursor-pointer' : 'cursor-text'}`}
                     onDoubleClick={() => handleDoubleClick(item)}
                     onClick={() => handleSingleClick(item)}
                   >
@@ -593,7 +596,7 @@ export default function ListsView({
                   />
                   <div className="flex items-center gap-1 flex-1">
                     <p
-                      className="text-[13px] font-medium text-black cursor-text"
+                      className={`text-[13px] font-medium text-black ${editingItemId ? 'cursor-pointer' : 'cursor-text'}`}
                       onDoubleClick={() => handleDoubleClick(item)}
                       onClick={() => handleSingleClick(item)}
                     >
