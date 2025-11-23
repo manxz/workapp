@@ -170,7 +170,7 @@ export default function ListsView({
         const numberedMatch = trimmedLine.match(/^\d+\.\s+(.+)$/);
         if (numberedMatch) {
           // Save previous item if exists
-          if (currentItem) {
+          if (currentItem !== null) {
             items.push({
               content: currentItem.content,
               notes: currentItem.notes.join('\n')
@@ -185,18 +185,18 @@ export default function ListsView({
         // Check if this is a bullet point (-, *, •)
         else if (/^[-*•]\s+/.test(trimmedLine)) {
           const bulletContent = trimmedLine.replace(/^[-*•]\s+/, '').trim();
-          if (currentItem) {
+          if (currentItem !== null) {
             currentItem.notes.push(bulletContent);
           }
         }
         // Any other line gets added to current item's notes
-        else if (currentItem && trimmedLine) {
+        else if (currentItem !== null && trimmedLine) {
           currentItem.notes.push(trimmedLine);
         }
       });
       
       // Don't forget the last item
-      if (currentItem) {
+      if (currentItem !== null) {
         items.push({
           content: currentItem.content,
           notes: currentItem.notes.join('\n')
