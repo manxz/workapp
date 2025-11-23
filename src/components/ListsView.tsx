@@ -176,9 +176,6 @@ export default function ListsView({
       <div className="border-b border-neutral-200 flex items-center justify-between px-4 h-14 flex-shrink-0">
         <div className="flex items-center gap-2">
           <h2 className="text-base font-medium text-black">{listName}</h2>
-          {isShared && (
-            <Users size={16} weight="fill" className="text-[#6A6A6A]" />
-          )}
           <span className="text-base font-medium text-neutral-500">
             {uncompletedCount}
           </span>
