@@ -54,6 +54,7 @@ export default function ListsView({
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [editingNotes, setEditingNotes] = useState("");
+  const switchingEditRef = useRef(false);
   const newItemInputRef = useRef<HTMLInputElement>(null);
   const newItemNotesRef = useRef<HTMLInputElement>(null);
   const skipNotesBlurRef = useRef(false);
@@ -268,6 +269,7 @@ export default function ListsView({
     // If any item is already being edited, single click opens another one
     if (editingItemId) {
       if (editingItemId !== item.id) {
+        switchingEditRef.current = true;
         setEditingItemId(item.id);
         setEditingText(item.content);
         setEditingNotes(item.notes || "");
@@ -277,7 +279,8 @@ export default function ListsView({
             notesTextareaRef.current.style.height = 'auto';
             notesTextareaRef.current.style.height = `${notesTextareaRef.current.scrollHeight}px`;
           }
-        }, 0);
+          switchingEditRef.current = false;
+        }, 50);
       }
     }
     // If no item is being edited, require double-click (do nothing on single click)
@@ -300,17 +303,27 @@ export default function ListsView({
   };
 
   const handleEditBlur = (itemId: string, e: React.FocusEvent) => {
+    // Don't close if we're switching to another item
+    if (switchingEditRef.current) {
+      return;
+    }
+    
     // Check if the new focus target is within the editing container
     if (editingContainerRef.current?.contains(e.relatedTarget as Node)) {
       return; // Don't close if clicking within the same editing container
     }
     
-    if (editingText.trim()) {
-      onUpdateItem(itemId, { content: editingText.trim(), notes: editingNotes.trim() });
-    }
-    setEditingItemId(null);
-    setEditingText("");
-    setEditingNotes("");
+    // Use a small timeout to allow click handlers to run first
+    setTimeout(() => {
+      if (!switchingEditRef.current && editingItemId === itemId) {
+        if (editingText.trim()) {
+          onUpdateItem(itemId, { content: editingText.trim(), notes: editingNotes.trim() });
+        }
+        setEditingItemId(null);
+        setEditingText("");
+        setEditingNotes("");
+      }
+    }, 100);
   };
 
   return (
@@ -465,7 +478,7 @@ export default function ListsView({
 
         {/* Uncompleted Items */}
         {uncompletedItems.map((item) => (
-          <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"} style={{ transition: 'transform 0.15s ease-out' }}>
+          <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"} style={{ transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
             {editingItemId === item.id ? (
               // Editing mode - checkbox inside container with adjusted padding
               <div 
@@ -550,7 +563,7 @@ export default function ListsView({
         {/* Completed Items */}
         {showCompleted &&
           completedItems.map((item) => (
-            <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"} style={{ transition: 'transform 0.15s ease-out' }}>
+            <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"} style={{ transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
               {editingItemId === item.id ? (
                 // Editing mode - checkbox inside container with adjusted padding
                 <div 
