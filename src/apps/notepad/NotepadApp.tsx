@@ -20,7 +20,7 @@ type List = {
   completed: number;
   total: number;
   isShared?: boolean;
-  owner_id: string;
+  owner_id?: string;
 };
 
 interface NotepadAppProps {
@@ -343,7 +343,7 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
             onUpdateItem={handleUpdateItem}
             onDeleteList={() => setShowDeleteModal(true)}
             onShareList={() => setShowShareModal(true)}
-            listOwnerId={selectedList.owner_id}
+            listOwnerId={selectedList.owner_id || ''}
           />
         )}
 
