@@ -328,7 +328,7 @@ export default function ListsView({
               // Editing mode - checkbox inside container with adjusted padding
               <div 
                 ref={editingContainerRef}
-                className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
+                className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] py-2 px-2 flex flex-col shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex items-center gap-2">
                   <Checkbox
@@ -342,7 +342,7 @@ export default function ListsView({
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                     onBlur={(e) => handleEditBlur(item.id, e)}
                     autoFocus
-                    className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent"
+                    className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent leading-[normal]"
                   />
                 </div>
                 {/* Notes input when editing */}
@@ -354,7 +354,7 @@ export default function ListsView({
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                     onBlur={(e) => handleEditBlur(item.id, e)}
                     placeholder="Notes"
-                    className="w-full text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent"
+                    className="w-full text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent leading-[normal]"
                   />
                 </div>
               </div>
