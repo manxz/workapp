@@ -160,8 +160,9 @@ export default function ListsView({
       e.preventDefault();
       
       // Group lines: numbered items with their associated bullet points
+      type TempItem = { content: string; notes: string[] };
       const items: { content: string; notes: string }[] = [];
-      let currentItem: { content: string; notes: string[] } | null = null;
+      let currentItem: TempItem | null = null;
       
       lines.forEach(line => {
         const trimmedLine = line.trim();
@@ -197,7 +198,7 @@ export default function ListsView({
       
       // Don't forget the last item
       if (currentItem !== null) {
-        const finalItem = currentItem;
+        const finalItem: TempItem = currentItem;
         items.push({
           content: finalItem.content,
           notes: finalItem.notes.join('\n')
