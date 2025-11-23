@@ -43,7 +43,7 @@ export function useLists() {
       const { data, error } = await supabase
         .from('lists')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Error fetching lists:', error);
