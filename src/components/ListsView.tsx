@@ -316,6 +316,9 @@ export default function ListsView({
           </div>
         </div>
 
+        {/* Spacer between new item and list items */}
+        <div className="h-2" />
+
         {/* Uncompleted Items */}
         {uncompletedItems.map((item) => (
           <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"}>
