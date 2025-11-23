@@ -320,12 +320,14 @@ export default function ListsView({
           <div key={item.id} className="px-4 py-1">
             {editingItemId === item.id ? (
               // Editing mode - show both content and notes inputs with outline
-              <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1">
+              <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
                 <div className="flex items-center gap-2">
-                  <Checkbox
-                    state="default"
-                    onClick={() => onToggleItem(item.id)}
-                  />
+                  <div className="flex items-center justify-center w-4 h-4">
+                    <Checkbox
+                      state="default"
+                      onClick={() => onToggleItem(item.id)}
+                    />
+                  </div>
                   <input
                     type="text"
                     value={editingText}
@@ -337,7 +339,7 @@ export default function ListsView({
                   />
                 </div>
                 {/* Notes input when editing - aligned with main input */}
-                <div className="flex items-center gap-2 ml-[21px]">
+                <div className="flex items-center gap-2 pl-6">
                   <input
                     type="text"
                     value={editingNotes}
@@ -355,15 +357,17 @@ export default function ListsView({
                   state="default"
                   onClick={() => onToggleItem(item.id)}
                 />
-                <p
-                  className="text-[13px] font-medium text-black flex-1 cursor-text"
-                  onDoubleClick={() => handleDoubleClick(item)}
-                >
-                  {item.content}
-                </p>
-                {item.notes && item.notes.trim() && (
-                  <Article size={14} weight="regular" className="text-[#6A6A6A] flex-shrink-0" />
-                )}
+                <div className="flex items-center gap-1 flex-1">
+                  <p
+                    className="text-[13px] font-medium text-black cursor-text"
+                    onDoubleClick={() => handleDoubleClick(item)}
+                  >
+                    {item.content}
+                  </p>
+                  {item.notes && item.notes.trim() && (
+                    <Article size={12} weight="regular" className="text-[#6A6A6A] opacity-60 flex-shrink-0" />
+                  )}
+                </div>
               </div>
             )}
           </div>
