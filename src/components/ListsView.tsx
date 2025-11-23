@@ -320,7 +320,7 @@ export default function ListsView({
           <div key={item.id} className="px-4 py-1">
             {editingItemId === item.id ? (
               // Editing mode - show both content and notes inputs with outline
-              <div className="border border-[#0070F3] rounded-[7px] px-2 py-1">
+              <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     state="default"
@@ -344,7 +344,7 @@ export default function ListsView({
                     onChange={(e) => setEditingNotes(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                     placeholder="Notes"
-                    className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
+                    className="flex-1 text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent"
                   />
                 </div>
               </div>
