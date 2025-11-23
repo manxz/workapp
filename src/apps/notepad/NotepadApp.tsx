@@ -19,7 +19,8 @@ type List = {
   name: string;
   completed: number;
   total: number;
-  isShared?: boolean;
+  is_shared?: boolean;
+  collaborator_count?: number;
   owner_id?: string;
 };
 
@@ -89,7 +90,8 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
           name: list.name,
           completed: completedItems.length,
           total: items.length,
-          isShared: list.isShared || false,
+          is_shared: list.is_shared || false,
+          collaborator_count: list.collaborator_count || 0,
           owner_id: list.owner_id,
         };
       }
@@ -99,7 +101,8 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
         name: list.name,
         completed: list.completed_count || 0,
         total: list.total_count || 0,
-        isShared: list.isShared || false,
+        is_shared: list.is_shared || false,
+        collaborator_count: list.collaborator_count || 0,
         owner_id: list.owner_id,
       };
     });
@@ -336,7 +339,7 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
             items={items}
             uncompletedCount={itemsLoading ? (selectedList.total - selectedList.completed) : uncompletedItems.length}
             completedCount={itemsLoading ? selectedList.completed : completedItems.length}
-            isShared={selectedList.isShared || false}
+            isShared={selectedList.is_shared || false}
             collaborators={collaborators}
             onToggleItem={handleToggleItem}
             onCreateItem={handleCreateItem}

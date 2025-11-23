@@ -11,7 +11,8 @@ export type List = {
   updated_at: string;
   completed_count?: number;
   total_count?: number;
-  isShared?: boolean;
+  is_shared?: boolean;
+  collaborator_count?: number;
 };
 
 /**
@@ -79,6 +80,7 @@ export function useLists() {
         // Transform data to include counts and shared status
         const listsWithCounts = data.map((list: any) => {
           const items = itemsByList[list.id] || [];
+          const collaboratorCount = collabCounts[list.id] || 0;
           return {
             id: list.id,
             name: list.name,
@@ -88,7 +90,8 @@ export function useLists() {
             updated_at: list.updated_at,
             total_count: items.length,
             completed_count: items.filter((item: any) => item.completed).length,
-            isShared: (collabCounts[list.id] || 0) > 0,
+            is_shared: collaboratorCount > 0,
+            collaborator_count: collaboratorCount,
           };
         });
         setLists(listsWithCounts);

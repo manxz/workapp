@@ -223,8 +223,8 @@ function NotepadSidebar({
           </div>
         )}
 
-        {/* Notes Section - Simple, always visible */}
-        <div className="flex flex-col w-full">
+        {/* Notes Section - Commented out for future Docs app */}
+        {/* <div className="flex flex-col w-full">
           <div className="px-2 pr-2">
             <div className="flex items-center justify-between pl-2 pr-0 py-1.5">
               <div className="flex items-center gap-0.5">
@@ -239,7 +239,6 @@ function NotepadSidebar({
             </div>
           </div>
 
-          {/* Show all notes in a simple list */}
           {notes.length > 0 && (
             <div className="flex flex-col gap-2 px-2">
               {notes.map((note) => (
@@ -252,7 +251,7 @@ function NotepadSidebar({
               ))}
             </div>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );

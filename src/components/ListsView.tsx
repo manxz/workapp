@@ -289,15 +289,16 @@ export default function ListsView({
               className="flex-1 text-[13px] font-medium text-black placeholder:text-[#B0B0B0] outline-none bg-transparent"
             />
           </div>
-          {/* Notes input */}
-          <div className="flex items-center gap-2 ml-6">
+          {/* Notes input - aligned with main input */}
+          <div className="flex items-center gap-2">
+            <div className="w-4" /> {/* Spacer to match checkbox width */}
             <input
               type="text"
               value={newItemNotes}
               onChange={(e) => setNewItemNotes(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Notes"
-              className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
+              className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent ml-2"
             />
           </div>
         </div>
@@ -306,8 +307,8 @@ export default function ListsView({
         {uncompletedItems.map((item) => (
           <div key={item.id} className="px-4 py-1">
             {editingItemId === item.id ? (
-              // Editing mode - show both content and notes inputs
-              <div>
+              // Editing mode - show both content and notes inputs with outline
+              <div className="border border-[#0070F3] rounded-[7px] px-2 py-1">
                 <div className="flex items-center gap-2">
                   <Checkbox
                     state="default"
@@ -323,15 +324,16 @@ export default function ListsView({
                     className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent"
                   />
                 </div>
-                {/* Notes input when editing */}
-                <div className="flex items-center gap-2 ml-6">
+                {/* Notes input when editing - aligned with main input */}
+                <div className="flex items-center gap-2">
+                  <div className="w-4" /> {/* Spacer to match checkbox width */}
                   <input
                     type="text"
                     value={editingNotes}
                     onChange={(e) => setEditingNotes(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                     placeholder="Notes"
-                    className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
+                    className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent ml-2"
                   />
                 </div>
               </div>
