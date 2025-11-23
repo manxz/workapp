@@ -35,13 +35,21 @@ export default function ChatInput({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const processedFilesRef = useRef<Set<string>>(new Set());
+  const mentionInputRef = useRef<{ getTextContent: () => string; clear: () => void }>(null);
 
-  const handleSendWithFiles = useCallback((message: string) => {
-    onSendMessage?.(message, uploadedFiles.length > 0 ? uploadedFiles : undefined);
-    setUploadedFiles([]);
-    setPreviewUrls([]);
-    processedFilesRef.current.clear();
-  }, [uploadedFiles, onSendMessage]);
+  const handleSendWithFiles = useCallback(() => {
+    const messageContent = mentionInputRef.current?.getTextContent().trim() || "";
+    
+    // Only send if there's text or files
+    if (messageContent || uploadedFiles.length > 0) {
+      onSendMessage?.(messageContent, uploadedFiles.length > 0 ? uploadedFiles : undefined);
+      mentionInputRef.current?.clear();
+      setUploadedFiles([]);
+      setPreviewUrls([]);
+      processedFilesRef.current.clear();
+      onStopTyping?.();
+    }
+  }, [uploadedFiles, onSendMessage, onStopTyping]);
 
   const handleFileSelect = useCallback((files: File | File[]) => {
     const fileArray = Array.isArray(files) ? files : [files];
@@ -137,6 +145,7 @@ export default function ChatInput({
 
           {/* Text input with mention support */}
           <MentionInput
+            ref={mentionInputRef}
             channelName={channelName}
             onSendMessage={handleSendWithFiles}
             onTyping={onTyping}
@@ -178,7 +187,9 @@ export default function ChatInput({
           {/* Send Button */}
           <button
             type="button"
-            className="bg-black p-1 rounded-md hover:bg-neutral-800 transition-colors"
+            onClick={handleSendWithFiles}
+            disabled={!mentionInputRef.current?.getTextContent().trim() && uploadedFiles.length === 0}
+            className="bg-black p-1 rounded-md hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Send message"
           >
             <ArrowUp size={16} weight="regular" className="text-white" />

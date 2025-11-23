@@ -5,7 +5,7 @@
  * Uses contenteditable for proper cursor positioning and inline styling.
  */
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import MentionPicker, { type User } from "./MentionPicker";
 import { getMentionQuery, isInMentionMode } from "@/lib/mentionUtils";
 
@@ -17,13 +17,18 @@ type MentionInputProps = {
   users?: User[];
 };
 
-export default function MentionInput({
+export interface MentionInputRef {
+  getTextContent: () => string;
+  clear: () => void;
+}
+
+const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
   channelName = "Design",
   onSendMessage,
   onTyping,
   onStopTyping,
   users = [],
-}: MentionInputProps) {
+}, ref) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const [showMentionPicker, setShowMentionPicker] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
@@ -34,6 +39,19 @@ export default function MentionInput({
     if (!editorRef.current) return "";
     return editorRef.current.innerText || "";
   }, []);
+
+  const clear = useCallback(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = "";
+    }
+    mentionMapRef.current = {};
+  }, []);
+
+  // Expose methods to parent
+  useImperativeHandle(ref, () => ({
+    getTextContent,
+    clear,
+  }));
 
   const getFormattedMessage = useCallback(() => {
     if (!editorRef.current) return "";
@@ -202,5 +220,8 @@ export default function MentionInput({
       />
     </div>
   );
-}
+});
 
+MentionInput.displayName = 'MentionInput';
+
+export default MentionInput;
