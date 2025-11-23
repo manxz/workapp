@@ -38,13 +38,13 @@ export function useLists() {
     }
 
     try {
+      // Fetch lists where user is owner OR collaborator (RLS handles this)
       const { data, error } = await supabase
         .from('lists')
         .select(`
           *,
           list_items(id, completed)
         `)
-        .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -106,7 +106,6 @@ export function useLists() {
           event: '*',
           schema: 'public',
           table: 'lists',
-          filter: `user_id=eq.${user.id}`,
         },
         () => {
           // Re-fetch to get updated counts
