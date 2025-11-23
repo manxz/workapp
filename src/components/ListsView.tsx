@@ -317,15 +317,15 @@ export default function ListsView({
 
         {/* Uncompleted Items */}
         {uncompletedItems.map((item) => (
-          <div key={item.id} className="px-4 py-1">
+          <div key={item.id} className={editingItemId === item.id ? "px-2 py-1" : "px-4 py-1"}>
             {editingItemId === item.id ? (
-              // Editing mode - checkbox outside, content inside bordered container
-              <div className="flex items-start gap-2">
-                <Checkbox
-                  state="default"
-                  onClick={() => onToggleItem(item.id)}
-                />
-                <div className="flex-1 bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+              // Editing mode - checkbox inside container with adjusted padding
+              <div className="bg-white border border-[rgba(29,29,31,0.2)] rounded-[8px] p-2 flex flex-col gap-1 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    state="default"
+                    onClick={() => onToggleItem(item.id)}
+                  />
                   <input
                     type="text"
                     value={editingText}
@@ -335,14 +335,16 @@ export default function ListsView({
                     autoFocus
                     className="flex-1 text-[13px] font-medium text-black outline-none bg-transparent"
                   />
-                  {/* Notes input when editing */}
+                </div>
+                {/* Notes input when editing */}
+                <div className="pl-[21px]">
                   <input
                     type="text"
                     value={editingNotes}
                     onChange={(e) => setEditingNotes(e.target.value)}
                     onKeyDown={(e) => handleEditKeyDown(e, item.id)}
                     placeholder="Notes"
-                    className="flex-1 text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent"
+                    className="w-full text-[12px] font-medium text-[#8a8a8a] placeholder:text-[#B0B0B0] outline-none bg-transparent"
                   />
                 </div>
               </div>
