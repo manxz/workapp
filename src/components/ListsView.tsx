@@ -55,6 +55,7 @@ export default function ListsView({
   const [editingText, setEditingText] = useState("");
   const [editingNotes, setEditingNotes] = useState("");
   const newItemInputRef = useRef<HTMLInputElement>(null);
+  const newItemNotesRef = useRef<HTMLInputElement>(null);
   const editingContainerRef = useRef<HTMLDivElement>(null);
   const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -79,11 +80,32 @@ export default function ListsView({
     .filter((item) => item.completed)
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && newItemText.trim()) {
+  const handleNewItemTextKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      newItemNotesRef.current?.focus();
+    } else if (e.key === "Enter" && newItemText.trim()) {
       onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
       setNewItemText("");
       setNewItemNotes("");
+      newItemInputRef.current?.focus();
+    }
+  };
+
+  const handleNewItemNotesKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (newItemText.trim()) {
+        onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
+        setNewItemText("");
+        setNewItemNotes("");
+        newItemInputRef.current?.focus();
+      }
+    } else if (e.key === "Enter" && newItemText.trim()) {
+      onCreateItem(newItemText.trim(), newItemNotes.trim() || undefined);
+      setNewItemText("");
+      setNewItemNotes("");
+      newItemInputRef.current?.focus();
     }
   };
 
@@ -216,6 +238,22 @@ export default function ListsView({
         notesTextareaRef.current.style.height = `${notesTextareaRef.current.scrollHeight}px`;
       }
     }, 0);
+  };
+
+  const handleSingleClick = (item: ListItem) => {
+    // If another item is already being edited, open this one
+    if (editingItemId && editingItemId !== item.id) {
+      setEditingItemId(item.id);
+      setEditingText(item.content);
+      setEditingNotes(item.notes || "");
+      // Auto-resize textarea on next tick
+      setTimeout(() => {
+        if (notesTextareaRef.current) {
+          notesTextareaRef.current.style.height = 'auto';
+          notesTextareaRef.current.style.height = `${notesTextareaRef.current.scrollHeight}px`;
+        }
+      }, 0);
+    }
   };
 
   const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>, itemId: string) => {
@@ -373,7 +411,7 @@ export default function ListsView({
               type="text"
               value={newItemText}
               onChange={(e) => setNewItemText(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={handleNewItemTextKeyDown}
               onBlur={handleNewItemBlur}
               onPaste={handlePaste}
               placeholder="New list item"
@@ -383,10 +421,11 @@ export default function ListsView({
           {/* Notes input - aligned with main input */}
           <div className="flex items-center gap-2 ml-[21px]">
             <input
+              ref={newItemNotesRef}
               type="text"
               value={newItemNotes}
               onChange={(e) => setNewItemNotes(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={handleNewItemNotesKeyDown}
               onBlur={handleNewItemBlur}
               placeholder="Notes"
               className="flex-1 text-[13px] font-normal text-[#6A6A6A] placeholder:text-[#B0B0B0] outline-none bg-transparent"
@@ -447,6 +486,7 @@ export default function ListsView({
                   <p
                     className="text-[13px] font-medium text-black cursor-text"
                     onDoubleClick={() => handleDoubleClick(item)}
+                    onClick={() => handleSingleClick(item)}
                   >
                     {item.content}
                   </p>
@@ -531,6 +571,7 @@ export default function ListsView({
                     <p
                       className="text-[13px] font-medium text-black cursor-text"
                       onDoubleClick={() => handleDoubleClick(item)}
+                      onClick={() => handleSingleClick(item)}
                     >
                       {item.content}
                     </p>
