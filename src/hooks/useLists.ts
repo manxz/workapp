@@ -38,13 +38,10 @@ export function useLists() {
     }
 
     try {
-      // Fetch lists where user is owner OR collaborator (RLS handles this)
+      // First, fetch lists only (without nested relation)
       const { data, error } = await supabase
         .from('lists')
-        .select(`
-          *,
-          list_items(id, completed)
-        `)
+        .select('*')
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -53,8 +50,21 @@ export function useLists() {
       }
       
       if (data) {
-        // Fetch collaborator counts separately
+        // Fetch list items separately for each list
         const listIds = data.map((list: any) => list.id);
+        const { data: itemsData } = await supabase
+          .from('list_items')
+          .select('id, list_id, completed')
+          .in('list_id', listIds);
+
+        // Group items by list_id
+        const itemsByList = (itemsData || []).reduce((acc: Record<string, any[]>, item: any) => {
+          if (!acc[item.list_id]) acc[item.list_id] = [];
+          acc[item.list_id].push(item);
+          return acc;
+        }, {});
+
+        // Fetch collaborator counts separately
         const { data: collabData } = await supabase
           .from('list_collaborators')
           .select('list_id')
@@ -67,17 +77,20 @@ export function useLists() {
         }, {});
 
         // Transform data to include counts and shared status
-        const listsWithCounts = data.map((list: any) => ({
-          id: list.id,
-          name: list.name,
-          user_id: list.user_id,
-          owner_id: list.owner_id,
-          created_at: list.created_at,
-          updated_at: list.updated_at,
-          total_count: list.list_items?.length || 0,
-          completed_count: list.list_items?.filter((item: any) => item.completed).length || 0,
-          isShared: (collabCounts[list.id] || 0) > 0,
-        }));
+        const listsWithCounts = data.map((list: any) => {
+          const items = itemsByList[list.id] || [];
+          return {
+            id: list.id,
+            name: list.name,
+            user_id: list.user_id,
+            owner_id: list.owner_id,
+            created_at: list.created_at,
+            updated_at: list.updated_at,
+            total_count: items.length,
+            completed_count: items.filter((item: any) => item.completed).length,
+            isShared: (collabCounts[list.id] || 0) > 0,
+          };
+        });
         setLists(listsWithCounts);
       }
     } catch (error) {
