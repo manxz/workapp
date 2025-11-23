@@ -31,9 +31,25 @@ interface NotepadAppProps {
 }
 
 export default function NotepadApp({ lists: rawLists, createList, deleteList, refreshLists }: NotepadAppProps) {
-  const [selectedListId, setSelectedListId] = useState<string | undefined>();
-  const [selectedNoteId, setSelectedNoteId] = useState<string | undefined>();
-  const [selectedType, setSelectedType] = useState<"list" | "note">("list");
+  // Initialize state from localStorage
+  const [selectedListId, setSelectedListId] = useState<string | undefined>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('notepad_selected_list_id') || undefined;
+    }
+    return undefined;
+  });
+  const [selectedNoteId, setSelectedNoteId] = useState<string | undefined>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('notepad_selected_note_id') || undefined;
+    }
+    return undefined;
+  });
+  const [selectedType, setSelectedType] = useState<"list" | "note">(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('notepad_selected_type') as "list" | "note") || "list";
+    }
+    return "list";
+  });
   const [showNewListModal, setShowNewListModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDeleteNoteModal, setShowDeleteNoteModal] = useState(false);
@@ -89,8 +105,41 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
     });
   }, [rawLists, selectedListId, items, completedItems, itemsLoading]);
 
-  // Auto-select first list or note on load
+  // Persist selected list ID to localStorage
   useEffect(() => {
+    if (selectedListId) {
+      localStorage.setItem('notepad_selected_list_id', selectedListId);
+    } else {
+      localStorage.removeItem('notepad_selected_list_id');
+    }
+  }, [selectedListId]);
+
+  // Persist selected note ID to localStorage
+  useEffect(() => {
+    if (selectedNoteId) {
+      localStorage.setItem('notepad_selected_note_id', selectedNoteId);
+    } else {
+      localStorage.removeItem('notepad_selected_note_id');
+    }
+  }, [selectedNoteId]);
+
+  // Persist selected type to localStorage
+  useEffect(() => {
+    localStorage.setItem('notepad_selected_type', selectedType);
+  }, [selectedType]);
+
+  // Auto-select first list or note on load (only if no saved selection or saved item doesn't exist)
+  useEffect(() => {
+    // Check if the saved selection is still valid
+    const savedListExists = selectedListId && lists.some(list => list.id === selectedListId);
+    const savedNoteExists = selectedNoteId && notes.some(note => note.id === selectedNoteId);
+    
+    // If we have a saved selection and it exists, keep it
+    if ((selectedType === 'list' && savedListExists) || (selectedType === 'note' && savedNoteExists)) {
+      return;
+    }
+    
+    // Otherwise, auto-select first available item
     if (!selectedListId && !selectedNoteId) {
       if (lists.length > 0) {
         setSelectedListId(lists[0].id);
@@ -100,7 +149,7 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
         setSelectedType("note");
       }
     }
-  }, [lists, notes, selectedListId, selectedNoteId]);
+  }, [lists, notes, selectedListId, selectedNoteId, selectedType]);
 
   // Find selected list and note
   const selectedList = lists.find((list) => list.id === selectedListId);
@@ -161,12 +210,14 @@ export default function NotepadApp({ lists: rawLists, createList, deleteList, re
   // Handle note selection
   const handleSelectNote = (note: Note) => {
     setSelectedNoteId(note.id);
+    setSelectedListId(undefined); // Clear list selection
     setSelectedType("note");
   };
 
   // Handle list selection
   const handleSelectList = (list: List) => {
     setSelectedListId(list.id);
+    setSelectedNoteId(undefined); // Clear note selection
     setSelectedType("list");
   };
 
