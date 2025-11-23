@@ -295,7 +295,7 @@ export default function ListsView({
         {/* New Item Input */}
         <div className="px-4 py-1">
           <div className="flex items-center gap-2">
-            <Checkbox state="add" />
+            <Checkbox state="default" />
             <input
               ref={newItemInputRef}
               type="text"
