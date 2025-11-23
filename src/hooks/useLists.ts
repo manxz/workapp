@@ -38,11 +38,19 @@ export function useLists() {
     }
 
     try {
+      console.log('[useLists] Fetching lists for user:', user?.id);
+      
       // First, fetch lists only (without nested relation)
       const { data, error } = await supabase
         .from('lists')
         .select('*')
         .order('created_at', { ascending: true });
+
+      console.log('[useLists] Query result:', { 
+        dataCount: data?.length, 
+        error: error ? JSON.stringify(error, null, 2) : null,
+        hasError: !!error 
+      });
 
       if (error) {
         console.error('Error fetching lists:', error);

@@ -111,6 +111,13 @@ export default function ShareListModal({
 
   // Handle clicking on permission badge to cycle through states
   const handlePermissionClick = (collaborator: Collaborator) => {
+    console.log('[ShareListModal] Clicked collaborator:', {
+      userId: collaborator.user_id,
+      currentPermission: collaborator.permission,
+      effective: getEffectivePermission(collaborator),
+      hasPending: pendingChanges.has(collaborator.user_id)
+    });
+    
     const newChanges = new Map(pendingChanges);
     const current = getEffectivePermission(collaborator);
     
@@ -132,6 +139,7 @@ export default function ShareListModal({
       newChanges.delete(collaborator.user_id);
     }
     
+    console.log('[ShareListModal] New pending changes:', Array.from(newChanges.entries()));
     setPendingChanges(newChanges);
   };
 
@@ -264,9 +272,12 @@ export default function ShareListModal({
               );
             })}
 
-            {/* Newly added users (pending) */}
+            {/* Newly added users (pending) - only show if NOT already a collaborator */}
             {Array.from(pendingChanges.entries())
-              .filter(([_, change]) => change.action === 'add')
+              .filter(([userId, change]) => 
+                change.action === 'add' && 
+                !collaborators.some(c => c.user_id === userId) // Don't show if already a collaborator
+              )
               .map(([userId, change]) => {
                 const pendingUser = getUserById(userId);
                 return (
