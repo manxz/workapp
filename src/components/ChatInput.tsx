@@ -35,14 +35,17 @@ export default function ChatInput({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const processedFilesRef = useRef<Set<string>>(new Set());
-  const mentionInputRef = useRef<{ getTextContent: () => string; clear: () => void }>(null);
+  const mentionInputRef = useRef<{ getTextContent: () => string; getFormattedMessage: () => string; clear: () => void }>(null);
 
   const handleSendWithFiles = useCallback(() => {
-    const messageContent = mentionInputRef.current?.getTextContent().trim() || "";
+    const plainText = mentionInputRef.current?.getTextContent().trim() || "";
+    const formattedMessage = mentionInputRef.current?.getFormattedMessage().trim() || "";
     
     // Only send if there's text or files
-    if (messageContent || uploadedFiles.length > 0) {
-      onSendMessage?.(messageContent, uploadedFiles.length > 0 ? uploadedFiles : undefined);
+    if (plainText || uploadedFiles.length > 0) {
+      // Use formatted message (with mentions) if available, otherwise plain text
+      const messageToSend = formattedMessage || plainText;
+      onSendMessage?.(messageToSend, uploadedFiles.length > 0 ? uploadedFiles : undefined);
       mentionInputRef.current?.clear();
       setUploadedFiles([]);
       setPreviewUrls([]);
@@ -188,7 +191,7 @@ export default function ChatInput({
           <button
             type="button"
             onClick={handleSendWithFiles}
-            disabled={!mentionInputRef.current?.getTextContent().trim() && uploadedFiles.length === 0}
+            disabled={!(mentionInputRef.current?.getTextContent()?.trim() || uploadedFiles.length > 0)}
             className="bg-black p-1 rounded-md hover:bg-neutral-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="Send message"
           >

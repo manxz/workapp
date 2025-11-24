@@ -19,6 +19,7 @@ type MentionInputProps = {
 
 export interface MentionInputRef {
   getTextContent: () => string;
+  getFormattedMessage: () => string;
   clear: () => void;
 }
 
@@ -50,6 +51,7 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
     getTextContent,
+    getFormattedMessage,
     clear,
   }));
 

@@ -39,6 +39,7 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const previousMessageCountRef = useRef(0);
   const isLoadingRef = useRef(false);
+  const previousMessagesRef = useRef<Message[]>([]);
 
   /**
    * Scrolls the message container to the bottom
@@ -50,26 +51,69 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
     }
   }, []);
 
-  // Only scroll to bottom when new messages are added, not when existing messages update (e.g., reactions)
-  useEffect(() => {
-    const currentCount = messages.length;
-    const previousCount = previousMessageCountRef.current;
-    
-    // Only scroll if message count increased (new message added)
-    if (currentCount > previousCount) {
-      scrollToBottom();
-    }
-    
-    previousMessageCountRef.current = currentCount;
-  }, [messages, scrollToBottom]);
-
-  // Keep scroll at bottom when container resizes (input grows)
+  // Handle scrolling for new messages and reactions
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const resizeObserver = new ResizeObserver(() => {
+    const currentCount = messages.length;
+    const previousCount = previousMessageCountRef.current;
+    
+    // Check if user is at/near bottom (within 50px)
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+    
+    // Only scroll if message count increased (new message added)
+    if (currentCount > previousCount) {
       scrollToBottom();
+    } else if (currentCount === previousCount && messages.length > 0) {
+      // Message count hasn't changed, check if reactions were added to the latest message
+      const previousMessages = previousMessagesRef.current;
+      if (previousMessages.length > 0) {
+        const latestMessage = messages[messages.length - 1];
+        const previousLatestMessage = previousMessages[previousMessages.length - 1];
+        
+        // Check if the latest message has more reactions than before
+        const currentReactionCount = latestMessage.reactions?.reduce((sum, r) => sum + r.userIds.length, 0) || 0;
+        const previousReactionCount = previousLatestMessage.reactions?.reduce((sum, r) => sum + r.userIds.length, 0) || 0;
+        
+        // If reactions were added to the latest message and user is at bottom, scroll to show them
+        if (currentReactionCount > previousReactionCount && isAtBottom) {
+          // Small delay to ensure DOM has updated
+          setTimeout(() => {
+            scrollToBottom();
+          }, 10);
+        }
+      }
+    }
+    
+    previousMessageCountRef.current = currentCount;
+    previousMessagesRef.current = [...messages]; // Store a copy for next comparison
+  }, [messages, scrollToBottom]);
+
+  // Keep scroll at bottom when input grows, but only if already at bottom
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let lastHeight = container.scrollHeight;
+
+    const resizeObserver = new ResizeObserver(() => {
+      const currentHeight = container.scrollHeight;
+      
+      // Skip if height change is small (likely a reaction, handled by the other useEffect)
+      const heightChange = Math.abs(currentHeight - lastHeight);
+      if (heightChange < 30) {
+        lastHeight = currentHeight;
+        return;
+      }
+      
+      // Only scroll to bottom if user was already at/near the bottom (within 100px)
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+      if (isNearBottom) {
+        scrollToBottom();
+      }
+      
+      lastHeight = currentHeight;
     });
 
     resizeObserver.observe(container);
