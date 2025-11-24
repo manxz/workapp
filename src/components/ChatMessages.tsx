@@ -28,13 +28,17 @@ type ChatMessagesProps = {
   currentUserId?: string;
   onReaction?: (messageId: string, emoji: string) => void;
   onOpenThread?: (messageId: string) => void;
+  loadingMore?: boolean;
+  hasMoreMessages?: boolean;
+  onLoadMore?: () => void;
 };
 
-function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: ChatMessagesProps) {
+function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadingMore, hasMoreMessages, onLoadMore }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const previousMessageCountRef = useRef(0);
+  const isLoadingRef = useRef(false);
 
   /**
    * Scrolls the message container to the bottom
@@ -75,9 +79,62 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
     };
   }, [scrollToBottom]);
 
+  // Infinite scroll: Load more messages when scrolling near the top
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !hasMoreMessages || loadingMore) return;
+
+    const handleScroll = () => {
+      // Check if user scrolled near the top (within 300px)
+      const scrollTop = container.scrollTop;
+      const threshold = 300;
+
+      if (scrollTop < threshold && !isLoadingRef.current) {
+        console.log('[ChatMessages] Triggering load more, scrollTop:', scrollTop);
+        isLoadingRef.current = true;
+        
+        // Save current scroll position before loading
+        const previousScrollHeight = container.scrollHeight;
+        const previousScrollTop = container.scrollTop;
+        
+        onLoadMore?.();
+        
+        // After messages load, restore scroll position
+        setTimeout(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            const heightDifference = newScrollHeight - previousScrollHeight;
+            container.scrollTop = previousScrollTop + heightDifference;
+            console.log('[ChatMessages] Scroll restored, heightDiff:', heightDifference);
+          }
+          isLoadingRef.current = false;
+        }, 200);
+      }
+    };
+
+    // Check immediately on mount (in case we're already at the top)
+    handleScroll();
+
+    container.addEventListener('scroll', handleScroll);
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [hasMoreMessages, loadingMore, onLoadMore]);
+
   return (
     <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ display: 'flex', flexDirection: 'column' }}>
       <div className="px-4 py-4" style={{ marginTop: 'auto' }}>
+        {/* Loading indicator at top */}
+        {loadingMore && (
+          <div className="flex justify-center mb-4">
+            <div className="flex items-center gap-2 text-sm text-neutral-500">
+              <div className="w-4 h-4 border-2 border-neutral-300 border-t-neutral-600 rounded-full animate-spin" />
+              <span>Loading older messages...</span>
+            </div>
+          </div>
+        )}
+        
         {messages.map((message, index) => {
           const prevMessage = index > 0 ? messages[index - 1] : null;
           const showDivider = shouldShowDateDivider(message.timestamp, prevMessage?.timestamp || null);
@@ -138,6 +195,8 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
                             src={url}
                             alt={`Uploaded image ${index + 1}`}
                             className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
+                            loading="lazy"
+                            decoding="async"
                           />
                         </div>
                       ))}
@@ -152,6 +211,8 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread }: Cha
                             src={message.imageUrl}
                             alt="Uploaded image"
                             className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
+                            loading="lazy"
+                            decoding="async"
                           />
                         </div>
                       )}

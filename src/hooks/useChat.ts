@@ -14,6 +14,15 @@ import {
 } from "@/lib/constants";
 
 /**
+ * Performance Configuration for Message Loading
+ * 
+ * INITIAL_DAYS: Only load messages from the last N days on first load
+ * MESSAGE_BATCH_SIZE: Number of messages to load when paginating backwards
+ */
+const INITIAL_DAYS = 5;
+const MESSAGE_BATCH_SIZE = 50;
+
+/**
  * Message type with support for text, images, reactions, and threads
  * 
  * Key Design Decisions:
@@ -98,6 +107,8 @@ export function useChat(conversationId: string) {
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [typingUsers, setTypingUsers] = useState<{ userId: string; userName: string; threadId?: string }[]>([]);
   const [activeThread, setActiveThread] = useState<ThreadInfo | null>(null);
   const [threadReplies, setThreadReplies] = useState<Message[]>([]);
@@ -113,31 +124,85 @@ export function useChat(conversationId: string) {
   /**
    * Loads messages from Supabase for the current conversation
    * 
+   * @param options.before - Load messages before this timestamp (for pagination)
+   * @param options.limit - Number of messages to load (defaults to MESSAGE_BATCH_SIZE)
+   * @param options.initialLoad - If true, only load last INITIAL_DAYS days
+   * 
    * Only loads top-level messages (thread replies are loaded separately).
    * Handles backward compatibility for old reaction format (object → array).
    * Automatically fetches thread metadata for messages with replies.
    */
-  const loadMessages = useCallback(async () => {
+  const loadMessages = useCallback(async (options?: { before?: string; limit?: number; initialLoad?: boolean }) => {
     try {
+      // Build messages query with pagination
+      let messagesQuery = supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .is("thread_id", null) // Only load top-level messages, not thread replies
+        .order("created_at", { ascending: false }) // Changed to DESC for pagination
+        .limit(options?.limit || MESSAGE_BATCH_SIZE);
+
+      // Initial load: Only fetch last INITIAL_DAYS days
+      if (options?.initialLoad !== false && !options?.before) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - INITIAL_DAYS);
+        messagesQuery = messagesQuery.gte('created_at', cutoffDate.toISOString());
+      }
+
+      // Pagination: Load messages before this timestamp
+      if (options?.before) {
+        messagesQuery = messagesQuery.lt('created_at', options.before);
+      }
+
+      // Build thread metadata query (only for recent threads - last 7 days)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
       // Fetch messages and thread metadata in parallel
       const [messagesResult, threadsResult] = await Promise.all([
-        supabase
-          .from("messages")
-          .select("*")
-          .eq("conversation_id", conversationId)
-          .is("thread_id", null) // Only load top-level messages, not thread replies
-          .order("created_at", { ascending: true }),
+        messagesQuery,
         supabase
           .from("messages")
           .select("thread_id, author_avatar, created_at")
           .eq("conversation_id", conversationId)
           .not("thread_id", "is", null) // Only get thread replies
+          .gte("created_at", sevenDaysAgo.toISOString()) // Only recent threads
           .order("created_at", { ascending: false })
       ]);
 
       if (messagesResult.error) throw messagesResult.error;
 
       if (messagesResult.data) {
+        // Check if we got fewer messages than requested (means we've reached the end)
+        const fetchedCount = messagesResult.data.length;
+        const requestedLimit = options?.limit || MESSAGE_BATCH_SIZE;
+        
+        let reachedEnd = fetchedCount < requestedLimit;
+        
+        // If we're doing initial load with date filter, check if there are older messages
+        if (options?.initialLoad && !options?.before && fetchedCount > 0) {
+          // Get the oldest message timestamp from what we loaded
+          const oldestLoadedMessage = messagesResult.data[messagesResult.data.length - 1];
+          const oldestTimestamp = oldestLoadedMessage.created_at;
+          
+          console.log('[useChat] Checking for older messages than:', oldestTimestamp);
+          
+          // Check if there are any messages older than this
+          const { data: olderCheck, error: olderError } = await supabase
+            .from("messages")
+            .select("id")
+            .eq("conversation_id", conversationId)
+            .is("thread_id", null)
+            .lt("created_at", oldestTimestamp)
+            .limit(1);
+          
+          console.log('[useChat] Older messages check:', { found: olderCheck?.length, error: olderError });
+          
+          // If we found older messages, hasMore should be true
+          reachedEnd = !olderCheck || olderCheck.length === 0;
+        }
+        
         // Build thread metadata map for instant lookup
         const threadMetadata = new Map<string, { replyCount: number; lastReplyAt: string; replyAvatars: string[] }>();
         
@@ -201,15 +266,51 @@ export function useChat(conversationId: string) {
             })
           };
         });
-        setMessages(formattedMessages);
+        
+        // Reverse to chronological order (oldest first) for display
+        const chronologicalMessages = formattedMessages.reverse();
+        
+        return { messages: chronologicalMessages, hasMore: !reachedEnd };
       }
+      
+      return { messages: [], hasMore: false };
     } catch (error) {
       console.error("Error loading messages:", error);
-    } finally {
-      setLoading(false);
+      return { messages: [], hasMore: false };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
+
+  /**
+   * Load older messages (pagination)
+   * 
+   * Called when user scrolls to top of message list.
+   * Loads MESSAGE_BATCH_SIZE messages before the oldest currently loaded message.
+   */
+  const loadMoreMessages = useCallback(async () => {
+    if (loadingMore || !hasMoreMessages || messages.length === 0) return;
+    
+    setLoadingMore(true);
+    
+    try {
+      const oldestMessage = messages[0];
+      const result = await loadMessages({ 
+        before: oldestMessage.timestamp, 
+        limit: MESSAGE_BATCH_SIZE,
+        initialLoad: false
+      });
+      
+      if (result) {
+        // Prepend older messages to the beginning
+        setMessages(prev => [...result.messages, ...prev]);
+        setHasMoreMessages(result.hasMore);
+      }
+    } catch (error) {
+      console.error("Error loading more messages:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMoreMessages, messages, loadMessages]);
 
   // Send a message
   const sendMessage = useCallback(
@@ -323,8 +424,28 @@ export function useChat(conversationId: string) {
     
     // Clear processed message IDs when switching conversations
     processedMessageIds.current.clear();
+    
+    // Reset pagination state
+    setHasMoreMessages(true);
+    setLoadingMore(false);
+    setLoading(true);
 
-    loadMessages();
+    // Load initial messages (last 2 days)
+    loadMessages({ initialLoad: true }).then(result => {
+      if (result) {
+        console.log('[useChat] Initial load:', {
+          messagesLoaded: result.messages.length,
+          hasMore: result.hasMore,
+          conversationId
+        });
+        setMessages(result.messages);
+        setHasMoreMessages(result.hasMore);
+      }
+      setLoading(false);
+    }).catch(error => {
+      console.error("Error loading initial messages:", error);
+      setLoading(false);
+    });
 
     // Subscribe to new messages and typing events
     const channel = supabase
@@ -924,6 +1045,9 @@ export function useChat(conversationId: string) {
     messages,
     sendMessage,
     loading,
+    loadingMore,
+    hasMoreMessages,
+    loadMoreMessages,
     typingUsers,
     broadcastTyping,
     broadcastStopTyping,

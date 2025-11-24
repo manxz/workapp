@@ -122,6 +122,9 @@ export default function ChatApp({ channels, users, getPresence, hasUnreadDot, ma
     messages,
     sendMessage,
     loading,
+    loadingMore,
+    hasMoreMessages,
+    loadMoreMessages,
     typingUsers,
     broadcastTyping,
     broadcastStopTyping,
@@ -320,6 +323,9 @@ export default function ChatApp({ channels, users, getPresence, hasUnreadDot, ma
               currentUserId={user?.id}
               onReaction={toggleReaction}
               onOpenThread={handleOpenThread}
+              loadingMore={loadingMore}
+              hasMoreMessages={hasMoreMessages}
+              onLoadMore={loadMoreMessages}
             />
             
             {/* Input */}
