@@ -1,6 +1,6 @@
 "use client";
 
-import { House, ChatCenteredText, Cube, Notepad, Plus, SignOut } from "@phosphor-icons/react";
+import { ChatCenteredText, Cube, Notepad, Plus, SignOut } from "@phosphor-icons/react";
 import { useAuth } from "@/contexts/AuthContext";
 
 type SidebarProps = {
@@ -27,10 +27,15 @@ export default function Sidebar({
 
   return (
     <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen items-center px-0 py-4 w-16 fixed left-0 top-0 z-40 overflow-visible">
-      {/* Logo Container - 24x24 black box with 16x16 filled house icon */}
+      {/* Logo Container - 24x24 green box with white asterisk icon */}
       <div className="flex flex-col gap-3 items-center w-full mb-4">
-        <div className="bg-black flex items-center justify-center rounded-md w-6 h-6">
-          <House size={16} weight="fill" className="text-white" />
+        <div className="flex items-center justify-center rounded-md w-6 h-6 overflow-hidden">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="24" height="24" rx="6" fill="#06DF79"/>
+            <path d="M12 6.5V17.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7 9L17 15" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M7 15L17 9" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
         </div>
       </div>
 
