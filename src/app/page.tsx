@@ -177,7 +177,7 @@ function HomeContent() {
 
   return (
     <AppProvider value={appCommunication}>
-      <div className="flex min-h-screen bg-white">
+      <div className="flex h-screen overflow-hidden bg-white">
         {/* Main Sidebar - Pass app preferences down */}
         <Sidebar
           activeView={activeView}

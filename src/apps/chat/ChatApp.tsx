@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Mountains } from "@phosphor-icons/react";
 import ChatSidebar from "@/components/ChatSidebar";
@@ -17,6 +17,11 @@ import { clearUnreadCount } from "@/global/tabTitle";
 import type { UserPresence } from "@/hooks/usePresence";
 import type { Channel } from "@/hooks/useChannels";
 import type { User } from "@/hooks/useUsers";
+
+// Layout constants
+const HEADER_HEIGHT = 56; // px
+const SIDEBAR_WIDTH = 264; // px
+const THREAD_PANEL_WIDTH = 512; // px
 
 interface ChatAppProps {
   channels: Channel[];
@@ -107,6 +112,20 @@ export default function ChatApp({ channels, users, getPresence, hasUnreadDot, ma
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const dragCounterRef = useRef(0);
+
+  // Dynamic layout state - track input area height for message container adjustment
+  const [inputAreaHeight, setInputAreaHeight] = useState(0);
+  const inputAreaRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  // Callback to update message container's bottom position when input grows
+  const handleInputHeightChange = useCallback(() => {
+    if (inputAreaRef.current && messagesContainerRef.current) {
+      const newHeight = inputAreaRef.current.offsetHeight;
+      setInputAreaHeight(newHeight);
+      messagesContainerRef.current.style.bottom = `${newHeight}px`;
+    }
+  }, []);
 
   // Get conversationId based on selectedChat and type
   const conversationId = selectedChat
@@ -251,6 +270,10 @@ export default function ChatApp({ channels, users, getPresence, hasUnreadDot, ma
     }
   };
 
+  // Calculate dynamic positioning values
+  const leftOffset = SIDEBAR_WIDTH;
+  const rightOffset = activeThread ? THREAD_PANEL_WIDTH : 0;
+
   return (
     <>
       {/* Chat Sidebar */}
@@ -287,85 +310,122 @@ export default function ChatApp({ channels, users, getPresence, hasUnreadDot, ma
         }}
       />
 
-      {/* Main Chat Area */}
-      <main 
-        className={`flex flex-col h-screen flex-1 relative overflow-hidden transition-all duration-200 ml-[264px] ${activeThread ? "mr-[512px]" : ""}`}
-        onDragEnter={handleDragEnter}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        {/* Drag & Drop Overlay */}
-        {isDraggingFile && selectedChat && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none" style={{ backgroundColor: 'rgba(255, 255, 255, 0.85)' }}>
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
-                <Mountains size={32} weight="regular" className="text-neutral-400" />
-              </div>
-              <p className="text-sm font-medium text-neutral-600">
-                Upload to {selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
-              </p>
-            </div>
-          </div>
-        )}
+      {/* Fixed Header */}
+      {selectedChat && (
+        <div 
+          className="fixed top-0 z-20 bg-white"
+          style={{ 
+            left: leftOffset, 
+            right: rightOffset,
+            height: HEADER_HEIGHT,
+          }}
+        >
+          <ChatHeader 
+            name={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name} 
+            avatar={selectedType === "dm" ? selectedChat.avatar : undefined} 
+          />
+        </div>
+      )}
 
-        {selectedChat ? (
-          <>
-            {/* Header */}
-            <ChatHeader 
-              name={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name} 
-              avatar={selectedType === "dm" ? selectedChat.avatar : undefined} 
-            />
-            
-            {/* Messages */}
-            <ChatMessages
-              messages={messages}
-              currentUserId={user?.id}
-              onReaction={toggleReaction}
-              onOpenThread={handleOpenThread}
-              loadingMore={loadingMore}
-              hasMoreMessages={hasMoreMessages}
-              onLoadMore={loadMoreMessages}
-            />
-            
-            {/* Input */}
-            <ChatInput
-              channelName={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
-              onSendMessage={(text, files) => sendMessage(text, files)}
-              onTyping={broadcastTyping}
-              onStopTyping={broadcastStopTyping}
-              externalFiles={pendingFiles}
-              users={users.map(u => ({ id: u.id, name: u.name, avatar: u.avatar }))}
-            />
-            
-            {/* Typing indicator */}
-            <TypingIndicator typingUsers={typingUsers} />
-            
-            {/* Thread Panel */}
-            {activeThread && (
-              <ThreadPanel
-                parentMessage={activeThread.parentMessage}
-                replies={activeThread.replies}
-                onClose={handleCloseThread}
-                onSendReply={(text) => sendThreadReply(activeThread.parentMessage.id, text)}
-                currentUserId={user?.id}
-                onReaction={toggleReaction}
-                typingUsers={typingUsers}
-                onTyping={broadcastTyping}
-                onStopTyping={broadcastStopTyping}
-              />
-            )}
-          </>
-        ) : channels.length === 0 && users.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-lg font-medium text-neutral-600 mb-2">No channels or users yet</p>
-              <p className="text-sm text-neutral-500">Create a channel or invite someone to start chatting!</p>
+      {/* Fixed Messages Container - position adjusts based on input height */}
+      {selectedChat && (
+        <div
+          ref={messagesContainerRef}
+          className="fixed overflow-y-auto"
+          style={{
+            top: HEADER_HEIGHT,
+            left: leftOffset,
+            right: rightOffset,
+            bottom: inputAreaHeight || 64, // Default to 64px (approx input height)
+          }}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Drag & Drop Overlay */}
+          {isDraggingFile && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none bg-white/85">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
+                  <Mountains size={32} weight="regular" className="text-neutral-400" />
+                </div>
+                <p className="text-sm font-medium text-neutral-600">
+                  Upload to {selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
+                </p>
+              </div>
             </div>
+          )}
+
+          <ChatMessages
+            messages={messages}
+            currentUserId={user?.id}
+            onReaction={toggleReaction}
+            onOpenThread={handleOpenThread}
+            loadingMore={loadingMore}
+            hasMoreMessages={hasMoreMessages}
+            onLoadMore={loadMoreMessages}
+          />
+        </div>
+      )}
+
+      {/* Fixed Input Area - stays at bottom, grows upward */}
+      {selectedChat && (
+        <div
+          ref={inputAreaRef}
+          className="fixed bottom-0 z-10 bg-white"
+          style={{
+            left: leftOffset,
+            right: rightOffset,
+          }}
+        >
+          <ChatInput
+            channelName={selectedType === "channel" ? `#${selectedChat.name}` : selectedChat.name}
+            onSendMessage={(text, files) => sendMessage(text, files)}
+            onTyping={broadcastTyping}
+            onStopTyping={broadcastStopTyping}
+            externalFiles={pendingFiles}
+            users={users.map(u => ({ id: u.id, name: u.name, avatar: u.avatar }))}
+            onHeightChange={handleInputHeightChange}
+          />
+          
+          {/* Typing Indicator */}
+          <TypingIndicator typingUsers={typingUsers} />
+        </div>
+      )}
+
+      {/* Empty state when no channels/users */}
+      {!selectedChat && channels.length === 0 && users.length === 0 && (
+        <div 
+          className="fixed flex items-center justify-center"
+          style={{
+            top: 0,
+            left: leftOffset,
+            right: rightOffset,
+            bottom: 0,
+          }}
+        >
+          <div className="text-center">
+            <p className="text-lg font-medium text-neutral-600 mb-2">No channels or users yet</p>
+            <p className="text-sm text-neutral-500">Create a channel or invite someone to start chatting!</p>
           </div>
-        ) : null}
-      </main>
+        </div>
+      )}
+
+      {/* Thread Panel */}
+      {activeThread && (
+        <ThreadPanel
+          parentMessage={activeThread.parentMessage}
+          replies={activeThread.replies}
+          onClose={handleCloseThread}
+          onSendReply={(text) => sendThreadReply(activeThread.parentMessage.id, text)}
+          currentUserId={user?.id}
+          onReaction={toggleReaction}
+          typingUsers={typingUsers}
+          onTyping={broadcastTyping}
+          onStopTyping={broadcastStopTyping}
+        />
+      )}
     </>
   );
 }
-

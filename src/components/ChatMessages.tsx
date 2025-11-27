@@ -90,30 +90,38 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
     previousMessagesRef.current = [...messages]; // Store a copy for next comparison
   }, [messages, scrollToBottom]);
 
-  // Keep scroll at bottom when input grows, but only if already at bottom
+  // Keep scroll at bottom when container resizes (e.g., input grows/shrinks)
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    let lastHeight = container.scrollHeight;
+    let lastClientHeight = container.clientHeight;
+    let lastScrollHeight = container.scrollHeight;
+    let wasAtBottom = true;
 
-    const resizeObserver = new ResizeObserver(() => {
-      const currentHeight = container.scrollHeight;
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
       
-      // Skip if height change is small (likely a reaction, handled by the other useEffect)
-      const heightChange = Math.abs(currentHeight - lastHeight);
-      if (heightChange < 30) {
-        lastHeight = currentHeight;
-        return;
-      }
+      const currentClientHeight = entry.contentRect.height;
+      const currentScrollHeight = container.scrollHeight;
       
-      // Only scroll to bottom if user was already at/near the bottom (within 100px)
-      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-      if (isNearBottom) {
+      // Check if we were at bottom before the resize
+      const distanceFromBottom = lastScrollHeight - container.scrollTop - lastClientHeight;
+      wasAtBottom = distanceFromBottom < 50;
+      
+      // If container height changed (input grew/shrank) and we were at bottom, stay at bottom
+      if (Math.abs(currentClientHeight - lastClientHeight) > 1 && wasAtBottom) {
         scrollToBottom();
       }
       
-      lastHeight = currentHeight;
+      // If scroll height changed (new content) and we were at bottom, stay at bottom  
+      if (currentScrollHeight !== lastScrollHeight && wasAtBottom) {
+        scrollToBottom();
+      }
+      
+      lastClientHeight = currentClientHeight;
+      lastScrollHeight = currentScrollHeight;
     });
 
     resizeObserver.observe(container);
@@ -134,7 +142,6 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
       const threshold = 300;
 
       if (scrollTop < threshold && !isLoadingRef.current) {
-        console.log('[ChatMessages] Triggering load more, scrollTop:', scrollTop);
         isLoadingRef.current = true;
         
         // Save current scroll position before loading
@@ -149,7 +156,6 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
             const newScrollHeight = container.scrollHeight;
             const heightDifference = newScrollHeight - previousScrollHeight;
             container.scrollTop = previousScrollTop + heightDifference;
-            console.log('[ChatMessages] Scroll restored, heightDiff:', heightDifference);
           }
           isLoadingRef.current = false;
         }, 200);
@@ -167,8 +173,8 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
   }, [hasMoreMessages, loadingMore, onLoadMore]);
 
   return (
-    <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ display: 'flex', flexDirection: 'column' }}>
-      <div className="px-4 py-4" style={{ marginTop: 'auto' }}>
+    <div ref={scrollContainerRef} className="h-full overflow-y-auto overflow-x-hidden flex flex-col">
+      <div className="mt-auto px-4 py-4">
         {/* Loading indicator at top */}
         {loadingMore && (
           <div className="flex justify-center mb-4">
@@ -229,15 +235,15 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
                   {(message.imageUrls || message.imageUrl) && (
                     <div className="mt-2 flex flex-col gap-2">
                       {/* Multiple images */}
-                      {message.imageUrls && message.imageUrls.map((url, index) => (
+                      {message.imageUrls && message.imageUrls.map((url, imgIndex) => (
                         <div 
-                          key={index}
+                          key={imgIndex}
                           className="cursor-pointer"
                           onClick={() => setLightboxImage(url)}
                         >
                           <img
                             src={url}
-                            alt={`Uploaded image ${index + 1}`}
+                            alt={`Uploaded image ${imgIndex + 1}`}
                             className="max-w-[400px] rounded-lg border border-neutral-200 hover:opacity-90 transition-opacity"
                             loading="lazy"
                             decoding="async"

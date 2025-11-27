@@ -21,6 +21,8 @@ type ChatInputProps = {
   onStopTyping?: () => void;
   externalFiles?: File[];
   users?: User[];
+  autoFocus?: boolean;
+  onHeightChange?: () => void; // Called when input area height changes
 };
 
 export default function ChatInput({ 
@@ -29,13 +31,45 @@ export default function ChatInput({
   onTyping, 
   onStopTyping, 
   externalFiles, 
-  users = [] 
+  users = [],
+  autoFocus = false,
+  onHeightChange,
 }: ChatInputProps) {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const processedFilesRef = useRef<Set<string>>(new Set());
-  const mentionInputRef = useRef<{ getTextContent: () => string; getFormattedMessage: () => string; clear: () => void }>(null);
+  const mentionInputRef = useRef<{ getTextContent: () => string; getFormattedMessage: () => string; clear: () => void; focus: () => void }>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Observe height changes and notify parent
+  useEffect(() => {
+    if (!containerRef.current || !onHeightChange) return;
+
+    // Call immediately to set initial height
+    onHeightChange();
+
+    const resizeObserver = new ResizeObserver(() => {
+      onHeightChange();
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [onHeightChange]);
+
+  // Auto-focus on mount if requested
+  useEffect(() => {
+    if (autoFocus) {
+      // Small delay to ensure the component is fully rendered
+      const timer = setTimeout(() => {
+        mentionInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoFocus]);
 
   const handleSendWithFiles = useCallback(() => {
     const plainText = mentionInputRef.current?.getTextContent().trim() || "";
@@ -120,9 +154,9 @@ export default function ChatInput({
   }, [externalFiles, handleFileSelect]);
 
   return (
-    <div className="px-4 relative">
+    <div ref={containerRef} className="px-4 pb-2">
       <div className="bg-neutral-50 border border-neutral-200 rounded-xl flex items-end justify-between pl-3 pr-2 py-2 gap-2">
-        <div className="flex flex-col gap-2 flex-1">
+        <div className="flex flex-col gap-2 min-w-0 flex-1">
           {/* File previews */}
           {previewUrls.length > 0 && (
             <div className="flex flex-wrap gap-2">

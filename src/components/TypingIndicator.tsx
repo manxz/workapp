@@ -8,7 +8,7 @@ type TypingIndicatorProps = {
 
 function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
   if (typingUsers.length === 0) {
-    return <div className="px-7 h-5 flex items-center" />;
+    return <div className="flex-shrink-0 px-7 h-5 flex items-center" />;
   }
 
   let typingText;
@@ -38,7 +38,7 @@ function TypingIndicator({ typingUsers }: TypingIndicatorProps) {
   }
 
   return (
-    <div className="px-7 h-5 flex items-center">
+    <div className="flex-shrink-0 px-7 h-5 flex items-center">
       <p className="text-[10px] font-medium text-[#6a6a6a] opacity-90">
         {typingText}
       </p>

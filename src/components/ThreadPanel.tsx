@@ -97,9 +97,9 @@ export default function ThreadPanel({
         </button>
       </div>
 
-      {/* Messages */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div className="px-4 py-4" style={{ marginTop: 'auto' }}>
+      {/* Messages - fills remaining space, scrollable */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+        <div className="px-4 py-4">
           {allMessages.map((message, index) => {
             const prevMessage = index > 0 ? allMessages[index - 1] : null;
             const showDivider = shouldShowDateDivider(message.timestamp, prevMessage?.timestamp || null);
@@ -218,16 +218,17 @@ export default function ThreadPanel({
         </div>
       </div>
 
-      {/* Input area - grows with content */}
-      <ChatInput
-        channelName="Thread"
-        onSendMessage={(text) => onSendReply(text)}
-        onTyping={() => onTyping?.(parentMessage.id)}
-        onStopTyping={() => onStopTyping?.(parentMessage.id)}
-      />
-      
-      {/* Typing Indicator - only show users typing in this thread */}
-      <TypingIndicator typingUsers={threadTypingUsers} />
+      {/* Input - fixed at bottom */}
+      <div className="flex-shrink-0">
+        <ChatInput
+          channelName="Thread"
+          onSendMessage={(text) => onSendReply(text)}
+          onTyping={() => onTyping?.(parentMessage.id)}
+          onStopTyping={() => onStopTyping?.(parentMessage.id)}
+          autoFocus
+        />
+        <TypingIndicator typingUsers={threadTypingUsers} />
+      </div>
     </div>
   );
 }

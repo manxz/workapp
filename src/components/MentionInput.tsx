@@ -21,6 +21,7 @@ export interface MentionInputRef {
   getTextContent: () => string;
   getFormattedMessage: () => string;
   clear: () => void;
+  focus: () => void;
 }
 
 const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
@@ -48,11 +49,16 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
     mentionMapRef.current = {};
   }, []);
 
+  const focus = useCallback(() => {
+    editorRef.current?.focus();
+  }, []);
+
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
     getTextContent,
     getFormattedMessage,
     clear,
+    focus,
   }));
 
   const getFormattedMessage = useCallback(() => {
@@ -165,22 +171,19 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
     
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const text = getTextContent();
-      if (text.trim()) {
-        // Get formatted message with mentions converted to storage format
-        const formattedMessage = getFormattedMessage();
-        
-        onSendMessage?.(formattedMessage);
-        
-        // Clear editor
-        if (editorRef.current) {
-          editorRef.current.innerHTML = "";
-        }
-        mentionMapRef.current = {};
-        onStopTyping?.();
+      // Always call onSendMessage - let parent (ChatInput) decide if there's content to send
+      // This allows sending images without text
+      const formattedMessage = getFormattedMessage();
+      onSendMessage?.(formattedMessage);
+      
+      // Clear editor
+      if (editorRef.current) {
+        editorRef.current.innerHTML = "";
       }
+      mentionMapRef.current = {};
+      onStopTyping?.();
     }
-  }, [showMentionPicker, getTextContent, getFormattedMessage, onSendMessage, onStopTyping]);
+  }, [showMentionPicker, getFormattedMessage, onSendMessage, onStopTyping]);
 
   const handleMentionSelect = useCallback((user: User) => {
     if (!editorRef.current) return;
