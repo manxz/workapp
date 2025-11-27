@@ -154,7 +154,7 @@ export default function ChatInput({
   }, [externalFiles, handleFileSelect]);
 
   return (
-    <div ref={containerRef} className="px-4 pb-2">
+    <div ref={containerRef} className="px-4">
       <div className="bg-neutral-50 border border-neutral-200 rounded-xl flex items-end justify-between pl-3 pr-2 py-2 gap-2">
         <div className="flex flex-col gap-2 min-w-0 flex-1">
           {/* File previews */}
