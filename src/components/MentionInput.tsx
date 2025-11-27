@@ -60,24 +60,62 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
     
     let formattedMessage = "";
     
-    // Walk through all child nodes and convert mentions
-    editorRef.current.childNodes.forEach(node => {
+    // Recursively process nodes to handle nested elements and preserve line breaks
+    const processNode = (node: ChildNode) => {
       if (node.nodeType === Node.TEXT_NODE) {
         formattedMessage += node.textContent;
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as HTMLElement;
+        const tagName = element.tagName.toLowerCase();
+        
+        // Handle line break elements
+        if (tagName === 'br') {
+          formattedMessage += '\n';
+        }
         // Check if it's a mention span
-        if (element.hasAttribute('data-mention-id')) {
+        else if (element.hasAttribute('data-mention-id')) {
           const userId = element.getAttribute('data-mention-id');
           const userName = element.getAttribute('data-mention-name');
           formattedMessage += `@[${userId}:${userName}]`;
-        } else {
-          formattedMessage += element.innerText;
+        }
+        // Handle div/p elements (browsers wrap lines in divs)
+        else if (tagName === 'div' || tagName === 'p') {
+          // Add newline before div/p unless it's the first element
+          if (formattedMessage.length > 0 && !formattedMessage.endsWith('\n')) {
+            formattedMessage += '\n';
+          }
+          // Process children
+          element.childNodes.forEach(child => processNode(child));
+        }
+        // Handle other elements by processing their children
+        else {
+          element.childNodes.forEach(child => processNode(child));
         }
       }
-    });
+    };
+    
+    // Walk through all child nodes
+    editorRef.current.childNodes.forEach(node => processNode(node));
     
     return formattedMessage;
+  }, []);
+
+  // Calculate cursor position relative to entire contenteditable text
+  const getCursorPosition = useCallback((): number => {
+    if (!editorRef.current) return 0;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return 0;
+    
+    const range = selection.getRangeAt(0);
+    
+    // Create a range from start of editor to cursor
+    const preCaretRange = range.cloneRange();
+    preCaretRange.selectNodeContents(editorRef.current);
+    preCaretRange.setEnd(range.endContainer, range.endOffset);
+    
+    // Get the text content up to cursor
+    return preCaretRange.toString().length;
   }, []);
 
   const handleInput = useCallback(() => {
@@ -91,8 +129,7 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
     // Check for mention mode
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const cursorPosition = range.startOffset;
+      const cursorPosition = getCursorPosition();
       
       const query = getMentionQuery(text, cursorPosition);
       if (query !== null) {
@@ -118,7 +155,7 @@ const MentionInput = forwardRef<MentionInputRef, MentionInputProps>(({
     } else {
       onStopTyping?.();
     }
-  }, [getTextContent, onTyping, onStopTyping]);
+  }, [getTextContent, getCursorPosition, onTyping, onStopTyping]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     // Don't send message if mention picker is open - let picker handle Enter/Tab
