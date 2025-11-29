@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, memo, useState, useCallback } from "react";
+import { useEffect, useRef, memo, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ArrowBendUpLeft, Stack } from "@phosphor-icons/react";
 import ThreadSummary from "./ThreadSummary";
@@ -38,92 +38,35 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
-  const previousMessageCountRef = useRef(0);
   const isLoadingRef = useRef(false);
-  const previousMessagesRef = useRef<Message[]>([]);
+  const hasInitiallyScrolled = useRef(false);
 
-  /**
-   * Scrolls the message container to the bottom
-   * Used when new messages arrive or container resizes
-   */
-  const scrollToBottom = useCallback(() => {
-    if (scrollContainerRef.current) {
+  // Scroll to bottom only on initial load
+  useEffect(() => {
+    if (messages.length > 0 && !hasInitiallyScrolled.current && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      hasInitiallyScrolled.current = true;
     }
-  }, []);
+  }, [messages.length]);
 
-  // Handle scrolling for new messages and reactions
+  // Track scroll height before loading more messages
+  const previousScrollHeightRef = useRef(0);
+  
+  // Preserve scroll position after older messages load
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const currentCount = messages.length;
-    const previousCount = previousMessageCountRef.current;
+    if (!container || !previousScrollHeightRef.current) return;
     
-    // Check if user is at/near bottom (within 50px)
-    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+    // If scroll height increased (older messages loaded), adjust scroll position
+    const newScrollHeight = container.scrollHeight;
+    const heightDiff = newScrollHeight - previousScrollHeightRef.current;
     
-    // Only scroll if message count increased (new message added)
-    if (currentCount > previousCount) {
-      scrollToBottom();
-    } else if (currentCount === previousCount && messages.length > 0) {
-      // Message count hasn't changed, check if reactions were added to the latest message
-      const previousMessages = previousMessagesRef.current;
-      if (previousMessages.length > 0) {
-        const latestMessage = messages[messages.length - 1];
-        const previousLatestMessage = previousMessages[previousMessages.length - 1];
-        
-        // Check if the latest message has more reactions than before
-        const currentReactionCount = latestMessage.reactions?.reduce((sum, r) => sum + r.userIds.length, 0) || 0;
-        const previousReactionCount = previousLatestMessage.reactions?.reduce((sum, r) => sum + r.userIds.length, 0) || 0;
-        
-        // If reactions were added to the latest message and user is at bottom, scroll to show them
-        if (currentReactionCount > previousReactionCount && isAtBottom) {
-          // Small delay to ensure DOM has updated
-          setTimeout(() => {
-            scrollToBottom();
-          }, 10);
-        }
-      }
+    if (heightDiff > 0) {
+      container.scrollTop += heightDiff;
     }
     
-    previousMessageCountRef.current = currentCount;
-    previousMessagesRef.current = [...messages]; // Store a copy for next comparison
-  }, [messages, scrollToBottom]);
-
-  // Keep scroll at bottom when container resizes (e.g., input grows/shrinks)
-  // Only handles viewport size changes, NOT scroll height changes (which would interfere with browsing history)
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    let lastClientHeight = container.clientHeight;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      
-      const currentClientHeight = entry.contentRect.height;
-      
-      // Check if user is currently at bottom (within 50px)
-      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-      const isAtBottom = distanceFromBottom < 50;
-      
-      // Only auto-scroll if the CONTAINER HEIGHT changed (input grew/shrank) AND user was at bottom
-      // Do NOT scroll when scroll height changes (images loading, etc.) - that's handled elsewhere
-      if (Math.abs(currentClientHeight - lastClientHeight) > 1 && isAtBottom) {
-        scrollToBottom();
-      }
-      
-      lastClientHeight = currentClientHeight;
-    });
-
-    resizeObserver.observe(container);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [scrollToBottom]);
+    previousScrollHeightRef.current = 0; // Reset after adjustment
+  }, [messages]);
 
   // Infinite scroll: Load more messages when scrolling near the top
   useEffect(() => {
@@ -138,26 +81,17 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
       if (scrollTop < threshold && !isLoadingRef.current) {
         isLoadingRef.current = true;
         
-        // Save current scroll position before loading
-        const previousScrollHeight = container.scrollHeight;
-        const previousScrollTop = container.scrollTop;
+        // Save current scroll height before loading
+        previousScrollHeightRef.current = container.scrollHeight;
         
         onLoadMore?.();
         
-        // After messages load, restore scroll position
+        // Reset loading flag after a delay
         setTimeout(() => {
-          if (container) {
-            const newScrollHeight = container.scrollHeight;
-            const heightDifference = newScrollHeight - previousScrollHeight;
-            container.scrollTop = previousScrollTop + heightDifference;
-          }
           isLoadingRef.current = false;
-        }, 200);
+        }, 500);
       }
     };
-
-    // Check immediately on mount (in case we're already at the top)
-    handleScroll();
 
     container.addEventListener('scroll', handleScroll);
 
