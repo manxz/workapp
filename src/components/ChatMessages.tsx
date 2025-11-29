@@ -40,14 +40,42 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const isLoadingRef = useRef(false);
   const hasInitiallyScrolled = useRef(false);
+  const wasAtBottomRef = useRef(true);
+  const previousMessageCountRef = useRef(0);
 
-  // Scroll to bottom only on initial load
+  // Track if user is near bottom before messages change
   useEffect(() => {
-    if (messages.length > 0 && !hasInitiallyScrolled.current && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      wasAtBottomRef.current = distanceFromBottom < 100;
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Scroll to bottom on initial load OR when new messages arrive (if user was at bottom)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || messages.length === 0) return;
+
+    const isNewMessage = messages.length > previousMessageCountRef.current && previousMessageCountRef.current > 0;
+    
+    // Initial load - always scroll to bottom
+    if (!hasInitiallyScrolled.current) {
+      container.scrollTop = container.scrollHeight;
       hasInitiallyScrolled.current = true;
     }
-  }, [messages.length]);
+    // New message arrived and user was at bottom - scroll to show it
+    else if (isNewMessage && wasAtBottomRef.current) {
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    previousMessageCountRef.current = messages.length;
+  }, [messages]);
 
   // Track scroll height before loading more messages
   const previousScrollHeightRef = useRef(0);
