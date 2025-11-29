@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, memo, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, ArrowBendUpLeft, Stack } from "@phosphor-icons/react";
 import ThreadSummary from "./ThreadSummary";
 import MentionText from "./MentionText";
@@ -91,37 +92,30 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
   }, [messages, scrollToBottom]);
 
   // Keep scroll at bottom when container resizes (e.g., input grows/shrinks)
+  // Only handles viewport size changes, NOT scroll height changes (which would interfere with browsing history)
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     let lastClientHeight = container.clientHeight;
-    let lastScrollHeight = container.scrollHeight;
-    let wasAtBottom = true;
 
     const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
       
       const currentClientHeight = entry.contentRect.height;
-      const currentScrollHeight = container.scrollHeight;
       
-      // Check if we were at bottom before the resize
-      const distanceFromBottom = lastScrollHeight - container.scrollTop - lastClientHeight;
-      wasAtBottom = distanceFromBottom < 50;
+      // Check if user is currently at bottom (within 50px)
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      const isAtBottom = distanceFromBottom < 50;
       
-      // If container height changed (input grew/shrank) and we were at bottom, stay at bottom
-      if (Math.abs(currentClientHeight - lastClientHeight) > 1 && wasAtBottom) {
-        scrollToBottom();
-      }
-      
-      // If scroll height changed (new content) and we were at bottom, stay at bottom  
-      if (currentScrollHeight !== lastScrollHeight && wasAtBottom) {
+      // Only auto-scroll if the CONTAINER HEIGHT changed (input grew/shrank) AND user was at bottom
+      // Do NOT scroll when scroll height changes (images loading, etc.) - that's handled elsewhere
+      if (Math.abs(currentClientHeight - lastClientHeight) > 1 && isAtBottom) {
         scrollToBottom();
       }
       
       lastClientHeight = currentClientHeight;
-      lastScrollHeight = currentScrollHeight;
     });
 
     resizeObserver.observe(container);
@@ -361,10 +355,10 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Lightbox Modal */}
-      {lightboxImage && (
+      {/* Lightbox Modal - rendered via portal to ensure it covers everything */}
+      {lightboxImage && typeof document !== 'undefined' && createPortal(
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-8"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-8"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
           onClick={() => setLightboxImage(null)}
         >
@@ -381,7 +375,8 @@ function ChatMessages({ messages, currentUserId, onReaction, onOpenThread, loadi
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
