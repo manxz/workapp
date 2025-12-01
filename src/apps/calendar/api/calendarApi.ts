@@ -5,7 +5,7 @@
  * Uses Supabase for data storage and Google Calendar API for synced calendars.
  */
 
-import { CalendarEvent, Calendar, UserSummary, DateRange, EventPayload, VideoCall, RepeatType } from '../types';
+import { CalendarEvent, Calendar, UserSummary, DateRange, EventPayload, VideoCall, RepeatType, RsvpStatus } from '../types';
 import { supabase } from '@/lib/supabase';
 
 // ============================================================================
@@ -362,6 +362,19 @@ async function fetchCalendarEvents(
         };
       });
       
+      // Determine if this is an invite (organizer is not the current user)
+      // organizer.self is true ONLY if the current user is the organizer
+      // If organizer.self is undefined or false, this is an invite from someone else
+      const organizerEmail = event.organizer?.email || null;
+      const selfAttendee = (event.attendees || []).find((a: any) => a.self === true);
+      
+      // isInvite is true when:
+      // 1. There's an organizer and they're NOT the current user (self !== true)
+      // 2. AND the current user is in the attendees list (selfAttendee exists)
+      const isInvite = event.organizer && event.organizer.self !== true && !!selfAttendee;
+      const myResponseStatus: RsvpStatus | undefined = selfAttendee?.responseStatus as RsvpStatus | undefined;
+      
+      
       return {
         id: event.id,
         title: event.summary || 'Untitled Event',
@@ -380,6 +393,10 @@ async function fetchCalendarEvents(
           code: extractMeetCode(event.hangoutLink),
         } : null,
         color: calendar.color,
+        // Invite fields
+        isInvite,
+        myResponseStatus,
+        organizerEmail,
       };
     });
   } catch (err) {
@@ -657,6 +674,50 @@ export async function deleteVideoCall(eventId: string, calendarId: string): Prom
     }
   } catch (err) {
     console.error('[CalendarAPI] Error removing video call:', err);
+    throw err;
+  }
+}
+
+/**
+ * Respond to a calendar invite (RSVP)
+ * @param response - 'accepted', 'declined', or 'tentative'
+ */
+export async function respondToInvite(
+  eventId: string, 
+  calendarId: string, 
+  response: 'accepted' | 'declined' | 'tentative'
+): Promise<RsvpStatus> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    const headers: Record<string, string> = { 
+      'Content-Type': 'application/json',
+    };
+    
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+    
+    const apiResponse = await fetch('/api/calendar/google/events/rsvp', {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: JSON.stringify({
+        eventId,
+        calendarId,
+        response,
+      }),
+    });
+
+    if (!apiResponse.ok) {
+      const error = await apiResponse.json();
+      console.error('[CalendarAPI] RSVP - API error:', error);
+      throw new Error(error.error || 'Failed to respond to invite');
+    }
+
+    return response;
+  } catch (err) {
+    console.error('[CalendarAPI] Error responding to invite:', err);
     throw err;
   }
 }

@@ -42,6 +42,7 @@ type EventPanelProps = {
   onVideoCallToggle?: (enabled: boolean) => Promise<void>;
   onTitleChange?: (title: string) => void;
   onAllDayChange?: (allDay: boolean) => void;
+  onRsvp?: (response: 'accepted' | 'declined' | 'tentative') => Promise<void>;
 };
 
 export default function EventPanel({
@@ -60,6 +61,7 @@ export default function EventPanel({
   onVideoCallToggle,
   onTitleChange,
   onAllDayChange,
+  onRsvp,
 }: EventPanelProps) {
   // Form state
   const [title, setTitle] = useState('');
@@ -251,7 +253,8 @@ export default function EventPanel({
   const selectedCalendar = calendars.find(c => c.id === calendarId);
 
   // Determine if editing is allowed
-  const isEditable = mode !== 'view' && canEdit;
+  // Invites (events from others) should never be editable - only RSVP is allowed
+  const isEditable = mode !== 'view' && canEdit && !event?.isInvite;
 
   return (
     <div className="w-60 border-l border-[rgba(29,29,31,0.1)] bg-[#fafafa] h-full flex flex-col fixed right-0 top-0 animate-slide-in">
@@ -694,6 +697,55 @@ export default function EventPanel({
           >
             {isSaving ? 'Saving...' : 'Save event'}
           </button>
+        </div>
+      )}
+
+      {/* RSVP Buttons for Invites */}
+      {event?.isInvite && onRsvp && (
+        <div className="p-4 border-t border-[rgba(29,29,31,0.1)] shrink-0">
+          <div className="text-[12px] font-medium text-[#7d7d7d] mb-2">
+            Going?
+            {event.myResponseStatus && event.myResponseStatus !== 'needsAction' && (
+              <span className="ml-2 text-[#1d1d1f]">
+                (Currently: {event.myResponseStatus === 'accepted' ? 'Yes' : event.myResponseStatus === 'declined' ? 'No' : 'Maybe'})
+              </span>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => onRsvp('accepted')}
+              disabled={isSaving}
+              className={`flex-1 rounded-lg p-2 text-[13px] font-medium transition-colors disabled:opacity-50 ${
+                event.myResponseStatus === 'accepted'
+                  ? 'bg-[#0070f3] text-white'
+                  : 'bg-white border border-[rgba(29,29,31,0.1)] text-[#1d1d1f] hover:bg-neutral-50'
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => onRsvp('declined')}
+              disabled={isSaving}
+              className={`flex-1 rounded-lg p-2 text-[13px] font-medium transition-colors disabled:opacity-50 ${
+                event.myResponseStatus === 'declined'
+                  ? 'bg-[#0070f3] text-white'
+                  : 'bg-white border border-[rgba(29,29,31,0.1)] text-[#1d1d1f] hover:bg-neutral-50'
+              }`}
+            >
+              No
+            </button>
+            <button
+              onClick={() => onRsvp('tentative')}
+              disabled={isSaving}
+              className={`flex-1 rounded-lg p-2 text-[13px] font-medium transition-colors disabled:opacity-50 ${
+                event.myResponseStatus === 'tentative'
+                  ? 'bg-[#0070f3] text-white'
+                  : 'bg-white border border-[rgba(29,29,31,0.1)] text-[#1d1d1f] hover:bg-neutral-50'
+              }`}
+            >
+              Maybe
+            </button>
+          </div>
         </div>
       )}
     </div>

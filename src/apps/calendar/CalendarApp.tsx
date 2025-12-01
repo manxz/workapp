@@ -98,6 +98,7 @@ export default function CalendarApp() {
     addVideoCall,
     removeVideoCall,
     canEditEvent,
+    rsvpToEvent,
     refresh: refreshEvents,
   } = useEvents(weekNav.dateRange, enabledCalendarIds);
   
@@ -256,6 +257,16 @@ export default function CalendarApp() {
     setPendingEventAllDay(allDay);
   }, []);
 
+  // Handle RSVP response to invites
+  const handleRsvp = useCallback(async (response: 'accepted' | 'declined' | 'tentative') => {
+    if (!selectedEvent) return;
+    const success = await rsvpToEvent(selectedEvent.id, response);
+    if (success) {
+      // Update the selected event with new response status
+      setSelectedEvent(prev => prev ? { ...prev, myResponseStatus: response } : null);
+    }
+  }, [selectedEvent, rsvpToEvent]);
+
   // Get the default calendar ID (memoized)
   const defaultCalendarId = useMemo(() => {
     return getDefaultCalendarId() || 'work';
@@ -345,6 +356,7 @@ export default function CalendarApp() {
           onVideoCallToggle={handleVideoCallToggle}
           onTitleChange={handlePendingTitleChange}
           onAllDayChange={handlePendingAllDayChange}
+          onRsvp={handleRsvp}
         />
       )}
       

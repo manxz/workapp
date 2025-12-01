@@ -46,6 +46,11 @@ export type UserSummary = {
 };
 
 /**
+ * RSVP response status for calendar invites
+ */
+export type RsvpStatus = 'needsAction' | 'accepted' | 'declined' | 'tentative';
+
+/**
  * Calendar event (meeting, appointment, etc.)
  */
 export type CalendarEvent = {
@@ -64,6 +69,10 @@ export type CalendarEvent = {
   googleSync?: GoogleSync | null;
   createdAt?: string;
   updatedAt?: string;
+  // Invite-related fields
+  isInvite?: boolean; // True if current user is attendee but not organizer
+  myResponseStatus?: RsvpStatus; // Current user's RSVP status
+  organizerEmail?: string | null; // Email of the event organizer
 };
 
 /**

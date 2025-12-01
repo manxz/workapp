@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { CalendarEvent, DateRange, EventPayload } from '../types';
+import { CalendarEvent, DateRange, EventPayload, RsvpStatus } from '../types';
 import { 
   fetchEvents, 
   createEvent, 
   updateEvent, 
   deleteEvent,
   createVideoCall,
-  deleteVideoCall
+  deleteVideoCall,
+  respondToInvite,
 } from '../api/calendarApi';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -384,6 +385,45 @@ export function useEvents(
     return true;
   }, []);
 
+  const rsvpToEvent = useCallback(async (
+    eventId: string, 
+    response: 'accepted' | 'declined' | 'tentative'
+  ): Promise<boolean> => {
+    const existingEvent = allEvents.find(e => e.id === eventId);
+    if (!existingEvent) {
+      setError('Event not found');
+      return false;
+    }
+    
+    try {
+      setSavingEventId(eventId);
+      await respondToInvite(eventId, existingEvent.calendarId, response);
+      
+      // Update local state with new response status
+      const newEvents = allEvents.map(e => 
+        e.id === eventId ? { ...e, myResponseStatus: response as RsvpStatus } : e
+      );
+      setAllEvents(newEvents);
+      
+      // Update cache
+      const range = fetchRangeRef.current || getLargeRange();
+      saveCache({
+        events: newEvents,
+        timestamp: Date.now(),
+        rangeStart: range.start,
+        rangeEnd: range.end,
+      });
+      
+      return true;
+    } catch (err) {
+      console.error('Error responding to invite:', err);
+      setError('Failed to respond to invite');
+      return false;
+    } finally {
+      setSavingEventId(null);
+    }
+  }, [allEvents]);
+
   return {
     events,          // Filtered for current view
     allEvents,       // All loaded events
@@ -397,6 +437,7 @@ export function useEvents(
     removeVideoCall,
     getEventById,
     canEditEvent,
+    rsvpToEvent,
     refresh,
     clearError: () => setError(null),
   };

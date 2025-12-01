@@ -40,6 +40,10 @@ const WORK_COLORS = {
   // Past events
   pastBg: '#CCE2FD',
   pastText: '#0C5EBE',
+  // Invite events (where user is attendee, not organizer)
+  inviteBg: '#FFFFFF',
+  inviteText: '#0070F3',
+  inviteBorder: '#0070F3',
 };
 
 export default function CalendarEventBlock({
@@ -74,15 +78,25 @@ export default function CalendarEventBlock({
   
   // Check if this is a holiday calendar (keep original styling for holidays)
   const isHoliday = isHolidayCalendar(event.calendarId);
+  
+  // Check if this is a pending invite (user is attendee, not organizer, and hasn't accepted)
+  const isInvite = event.isInvite === true;
+  const isPendingInvite = isInvite && event.myResponseStatus !== 'accepted';
 
   // Determine colors based on event state
   let bgColor: string;
   let textColor: string;
+  let borderColor: string = 'white'; // Default white border
 
   if (isHoliday) {
     // Holiday events: keep semi-transparent styling
     bgColor = hexToRgba(color, 0.2);
     textColor = getDarkerShade(color);
+  } else if (isPendingInvite) {
+    // Pending invite events: white background, blue text, blue border
+    bgColor = WORK_COLORS.inviteBg;
+    textColor = WORK_COLORS.inviteText;
+    borderColor = WORK_COLORS.inviteBorder;
   } else if (isSelected || !isPast) {
     // Work calendar: Future or selected events - solid primary blue
     bgColor = WORK_COLORS.futureBg;
@@ -118,7 +132,7 @@ export default function CalendarEventBlock({
       style={{
         ...style,
         backgroundColor: bgColor,
-        border: '1px solid white', // White border all around for overlap effect
+        border: `1px solid ${borderColor}`,
       }}
     >
       {/* Title and time */}
@@ -184,10 +198,15 @@ export function AllDayEventBlock({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const isPast = endDate < today;
+  
+  // Check if this is a pending invite (not yet accepted)
+  const isInvite = event.isInvite === true;
+  const isPendingInvite = isInvite && event.myResponseStatus !== 'accepted';
 
   // Determine colors based on event state
   let bgColor: string;
   let textColor: string;
+  let borderColor: string | undefined;
 
   if (isHoliday) {
     // Holiday events: keep semi-transparent styling
@@ -197,6 +216,11 @@ export function AllDayEventBlock({
     // Birthday: solid color with green text
     bgColor = color;
     textColor = '#03641b';
+  } else if (isPendingInvite) {
+    // Pending invite events: white background, blue text, blue border
+    bgColor = WORK_COLORS.inviteBg;
+    textColor = WORK_COLORS.inviteText;
+    borderColor = WORK_COLORS.inviteBorder;
   } else if (isSelected || !isPast) {
     // Work calendar: Future or selected events - solid primary blue
     bgColor = WORK_COLORS.futureBg;
@@ -218,7 +242,10 @@ export function AllDayEventBlock({
         e.stopPropagation();
       }}
       className="w-full rounded-[4px] px-[6px] py-0 text-left truncate h-[20px] flex items-center transition-all duration-100 cursor-pointer"
-      style={{ backgroundColor: bgColor }}
+      style={{ 
+        backgroundColor: bgColor,
+        border: borderColor ? `1px solid ${borderColor}` : undefined,
+      }}
     >
       <span className="text-[11px] font-medium truncate" style={{ color: textColor }}>
         {event.title}
