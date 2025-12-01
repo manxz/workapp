@@ -387,7 +387,7 @@ export default function CalendarGrid({
 
       {/* All-day events row */}
       {hasAllDayEvents && (
-        <div className="flex border-b border-[rgba(29,29,31,0.1)]">
+        <div className="flex border-b border-[rgba(29,29,31,0.1)] h-7">
           {/* Empty space for time column */}
           <div className="w-[72px] flex-shrink-0" />
           
@@ -402,7 +402,7 @@ export default function CalendarGrid({
             return (
               <div
                 key={i}
-                className="flex-1 pt-px pb-px pl-px pr-3 border-l border-[rgba(29,29,31,0.1)] space-y-0.5"
+                className="flex-1 flex items-stretch pt-px pb-px pl-px pr-3 border-l border-[rgba(29,29,31,0.1)] gap-0.5 overflow-hidden"
               >
                 {dayAllDayEvents.map(event => (
                   <AllDayEventBlock
@@ -416,7 +416,7 @@ export default function CalendarGrid({
                 {/* Pending all-day event */}
                 {showPendingAllDay && (
                   <div
-                    className="rounded-[4px] px-[6px] py-[2px] text-[11px] font-medium leading-normal truncate pointer-events-none"
+                    className="rounded-[8px] px-[6px] h-full flex items-center text-[11px] font-medium leading-normal truncate pointer-events-none"
                     style={{ backgroundColor: '#CCE2FD', color: '#0C5EBE' }}
                   >
                     {pendingEvent.title || '(No title)'}

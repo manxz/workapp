@@ -123,7 +123,7 @@ export default function CalendarEventBlock({
         e.stopPropagation();
       }}
       className={`
-        absolute rounded-[4px] overflow-hidden text-left
+        absolute rounded-[8px] overflow-hidden text-left
         flex flex-col items-start
         transition-all duration-100 cursor-pointer
         ${isShort ? 'justify-center' : hasIndicators ? 'justify-between' : 'justify-start'}
@@ -241,7 +241,7 @@ export function AllDayEventBlock({
         // Prevent grid from starting a new selection when clicking on an event
         e.stopPropagation();
       }}
-      className="w-full rounded-[4px] px-[6px] py-0 text-left truncate h-[20px] flex items-center transition-all duration-100 cursor-pointer"
+      className="w-full rounded-[8px] px-[6px] py-0 text-left truncate h-full flex items-center transition-all duration-100 cursor-pointer"
       style={{ 
         backgroundColor: bgColor,
         border: borderColor ? `1px solid ${borderColor}` : undefined,
