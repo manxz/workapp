@@ -1,6 +1,7 @@
 "use client";
 
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
+import ButtonSmall from '@/components/ButtonSmall';
 
 type CalendarHeaderProps = {
   monthLabel: string;
@@ -22,12 +23,9 @@ export default function CalendarHeader({
       {/* Left: Today button, then navigation arrows, then month/year */}
       <div className="flex items-center gap-3">
         {/* Today button */}
-        <button
-          onClick={onToday}
-          className="flex items-center justify-center px-2 h-6 text-[12px] font-medium text-black bg-[#fafafa] border border-[rgba(29,29,31,0.2)] rounded-[7px] hover:bg-neutral-100 transition-colors"
-        >
+        <ButtonSmall onClick={onToday}>
           Today
-        </button>
+        </ButtonSmall>
         
         {/* Navigation arrows */}
         <div className="flex items-center gap-1">
