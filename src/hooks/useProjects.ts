@@ -49,7 +49,7 @@ export type Project = {
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
 
   useEffect(() => {
     if (!user) {
@@ -115,6 +115,7 @@ export function useProjects() {
           name,
           description,
           created_by: user.id,
+          organization_id: organization?.id,
         })
         .select()
         .single();

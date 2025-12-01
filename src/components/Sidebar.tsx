@@ -1,11 +1,11 @@
 "use client";
 
-import { ChatCenteredText, Cube, Notepad, Plus, SignOut } from "@phosphor-icons/react";
+import { ChatCenteredText, Cube, Notepad, Calendar, Plus, SignOut } from "@phosphor-icons/react";
 import { useAuth } from "@/contexts/AuthContext";
 
 type SidebarProps = {
-  activeView: "chat" | "projects" | "notes" | "apps";
-  onViewChange: (view: "chat" | "projects" | "notes" | "apps") => void;
+  activeView: "chat" | "projects" | "notes" | "calendar" | "apps";
+  onViewChange: (view: "chat" | "projects" | "notes" | "calendar" | "apps") => void;
   hasUnreadMessages?: boolean;
   enabledApps: (appId: string) => boolean;
   appsLoading: boolean;
@@ -24,6 +24,7 @@ export default function Sidebar({
   const showChat = !appsLoading && enabledApps('chat');
   const showProjects = !appsLoading && enabledApps('projects');
   const showNotepad = !appsLoading && enabledApps('notes');
+  const showCalendar = !appsLoading && enabledApps('calendar');
 
   return (
     <div className="bg-neutral-100 border-r border-neutral-200 flex flex-col h-screen items-center px-0 py-4 w-16 fixed left-0 top-0 z-40 overflow-visible">
@@ -111,6 +112,27 @@ export default function Sidebar({
               {/* Tooltip */}
               <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
                 Notepad
+              </div>
+            </button>
+          )}
+
+          {/* Calendar Icon - Only show if enabled */}
+          {showCalendar && (
+            <button
+              onClick={() => onViewChange("calendar")}
+              className={`flex items-center justify-center rounded-[7px] relative w-8 h-8 transition-colors group ${
+                activeView === "calendar"
+                  ? "bg-neutral-200"
+                  : "hover:bg-neutral-200"
+              }`}
+            >
+              <Calendar
+                size={16}
+                weight={activeView === "calendar" ? "fill" : "regular"}
+              />
+              {/* Tooltip */}
+              <div className="absolute left-full ml-2 px-2 py-1 bg-[#1d1d1f] text-white text-[10px] font-semibold rounded-[6px] shadow-[0px_1px_2px_0px_rgba(29,29,31,0.08)] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap pointer-events-none z-50">
+                Calendar
               </div>
             </button>
           )}

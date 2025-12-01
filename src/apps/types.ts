@@ -3,7 +3,7 @@ import { ComponentType } from 'react';
 /**
  * Available app IDs in the system
  */
-export type AppId = 'chat' | 'projects' | 'notes' | 'crm';
+export type AppId = 'chat' | 'projects' | 'notes' | 'calendar' | 'crm';
 
 /**
  * App metadata and configuration

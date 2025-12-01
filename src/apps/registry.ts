@@ -59,6 +59,19 @@ export const AVAILABLE_APPS: Record<AppId, AppDefinition> = {
     isWIP: false,
   },
 
+  // Calendar app
+  calendar: {
+    id: 'calendar',
+    name: 'Calendar',
+    icon: 'Calendar',
+    component: () => import('./calendar/CalendarApp'),
+    defaultEnabled: true,
+    description: 'Schedule meetings and manage your time',
+    category: 'Productivity',
+    canDisable: true,
+    isWIP: false,
+  },
+
   crm: {
     id: 'crm',
     name: 'CRM',

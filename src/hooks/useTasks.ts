@@ -56,7 +56,7 @@ export type Task = {
  * @returns Task list, loading state, and CRUD functions
  */
 export function useTasks(projectFilter?: string) {
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -113,6 +113,7 @@ export function useTasks(projectFilter?: string) {
           status: "todo",
           project,
           created_by: user.id,
+          organization_id: organization?.id,
         });
 
         if (error) throw error;
@@ -120,7 +121,7 @@ export function useTasks(projectFilter?: string) {
         console.error("Error creating task:", error);
       }
     },
-    [user]
+    [user, organization]
   );
 
   const updateTask = useCallback(

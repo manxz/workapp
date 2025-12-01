@@ -38,6 +38,11 @@ const NotepadApp = dynamic(() => import("@/apps/notepad/NotepadApp"), {
   ssr: false,
 });
 
+const CalendarApp = dynamic(() => import("@/apps/calendar/CalendarApp"), {
+  loading: () => <div className="flex-1 flex items-center justify-center"><p className="text-neutral-600">Loading Calendar...</p></div>,
+  ssr: false,
+});
+
 const AppLibraryView = dynamic(() => import("@/apps/library/AppLibraryView"), {
   loading: () => <div className="flex-1 flex items-center justify-center"><p className="text-neutral-600">Loading Apps...</p></div>,
   ssr: false,
@@ -93,10 +98,10 @@ function HomeContent() {
   // Note: Tab title is now managed by src/global/tabTitle.ts
   
   // Initialize active view from localStorage
-  const [activeView, setActiveView] = useState<"chat" | "projects" | "notes" | "apps">(() => {
+  const [activeView, setActiveView] = useState<"chat" | "projects" | "notes" | "calendar" | "apps">(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem("activeView");
-      return (saved as "chat" | "projects" | "notes" | "apps") || "chat";
+      return (saved as "chat" | "projects" | "notes" | "calendar" | "apps") || "chat";
     }
     return "chat";
   });
@@ -122,14 +127,17 @@ function HomeContent() {
     if (activeView === "notes" && !isAppEnabled("notes")) {
       setActiveView("chat");
     }
-  }, [activeView, isAppEnabled, appsLoading, loading, channelsLoading, projectsLoading]);
+    if (activeView === "calendar" && !isAppEnabled("calendar")) {
+      setActiveView("chat");
+    }
+  }, [activeView, isAppEnabled, appsLoading, loading, channelsLoading, projectsLoading, listsLoading]);
 
   // Cross-app communication interface
   const appCommunication: AppCommunication = {
     navigateToApp: (appId: string, params?: Record<string, any>) => {
       // Navigate to different app
-      if (appId === 'chat' || appId === 'projects' || appId === 'apps') {
-        setActiveView(appId as "chat" | "projects" | "apps");
+      if (appId === 'chat' || appId === 'projects' || appId === 'calendar' || appId === 'apps') {
+        setActiveView(appId as "chat" | "projects" | "calendar" | "apps");
       }
       // In the future, handle params for deep linking
       // e.g., navigateToApp('projects', { projectId: '123', taskId: '456' })
@@ -217,6 +225,7 @@ function HomeContent() {
             refreshLists={refreshLists}
           />
         )}
+        {activeView === "calendar" && <CalendarApp />}
         {activeView === "apps" && <AppLibraryView sharedToggleApp={toggleApp} sharedIsAppEnabled={isAppEnabled} />}
       </div>
     </AppProvider>

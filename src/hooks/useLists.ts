@@ -25,7 +25,7 @@ export type List = {
  * - Loading states
  */
 export function useLists() {
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const [lists, setLists] = useState<List[]>([]);
   const [loading, setLoading] = useState(true);
   const skipNextRealtimeUpdate = useRef(false);
@@ -195,6 +195,7 @@ export function useLists() {
             name,
             user_id: user.id,
             owner_id: user.id,
+            organization_id: organization?.id,
           })
           .select()
           .single();

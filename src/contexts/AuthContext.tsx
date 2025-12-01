@@ -6,6 +6,17 @@ import { supabase } from "@/lib/supabase";
 import { AUTH_INIT_TIMEOUT } from "@/lib/constants";
 
 /**
+ * Organization type
+ */
+type Organization = {
+  id: string;
+  name: string;
+  slug: string;
+  domain: string | null;
+  logo_url: string | null;
+};
+
+/**
  * Authentication context shape
  */
 type AuthContextType = {
@@ -16,7 +27,10 @@ type AuthContextType = {
     id: string;
     full_name: string | null;
     avatar_url: string | null;
+    organization_id: string | null;
   } | null;
+  /** User's organization (null if not in an org) */
+  organization: Organization | null;
   /** True while checking auth status on initial load */
   loading: boolean;
   /** Signs out the current user */
@@ -50,6 +64,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AuthContextType["profile"]>(null);
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loadProfile(session.user.id);
       } else {
         setProfile(null);
+        setOrganization(null);
       }
     });
 
@@ -94,12 +110,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_url")
+      .select("id, full_name, avatar_url, organization_id")
       .eq("id", userId)
       .single();
 
     if (data) {
       setProfile(data);
+      
+      // Load organization if user has one
+      if (data.organization_id) {
+        const { data: orgData } = await supabase
+          .from("organizations")
+          .select("id, name, slug, domain, logo_url")
+          .eq("id", data.organization_id)
+          .single();
+        
+        if (orgData) {
+          setOrganization(orgData);
+        }
+      } else {
+        setOrganization(null);
+      }
     }
   };
 
@@ -108,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, organization, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

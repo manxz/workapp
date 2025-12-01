@@ -104,7 +104,7 @@ export type ThreadInfo = {
  * @returns Chat interface methods and state
  */
 export function useChat(conversationId: string) {
-  const { user, profile } = useAuth();
+  const { user, profile, organization } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -391,6 +391,7 @@ export function useChat(conversationId: string) {
           text: text,
           image_urls: imageUrls.length > 0 ? imageUrls : null,
           mentions: mentionedUserIds, // Store mentioned user IDs
+          organization_id: organization?.id,
         });
 
         if (error) {
@@ -994,6 +995,7 @@ export function useChat(conversationId: string) {
         author_avatar: profile.avatar_url || `${USER_AVATAR_PLACEHOLDER}${user.id}`,
         text: text,
         thread_id: parentMessageId,
+        organization_id: organization?.id,
       });
 
       if (error) throw error;

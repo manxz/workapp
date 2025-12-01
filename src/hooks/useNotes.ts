@@ -14,7 +14,7 @@ export interface Note {
 }
 
 export function useNotes() {
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -99,7 +99,7 @@ export function useNotes() {
 
         const { data, error } = await supabase
           .from('notes')
-          .insert({ title, content, preview, user_id: user.id })
+          .insert({ title, content, preview, user_id: user.id, organization_id: organization?.id })
           .select()
           .single();
 

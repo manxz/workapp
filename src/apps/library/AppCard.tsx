@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChatCenteredText, Cube, Notepad, UserCircle, Lock } from '@phosphor-icons/react';
+import { ChatCenteredText, Cube, Notepad, Calendar, UserCircle, Lock } from '@phosphor-icons/react';
 import { AppDefinition } from '@/apps/types';
 
 // Icon map for tree-shaking (only imports icons we actually use)
@@ -7,6 +7,7 @@ const ICON_MAP = {
   ChatCenteredText,
   Cube,
   Notepad,
+  Calendar,
   UserCircle,
 } as const;
 
