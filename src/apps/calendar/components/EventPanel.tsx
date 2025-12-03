@@ -525,33 +525,73 @@ export default function EventPanel({
             </div>
             
             {/* Participants list - bordered container */}
-            {participants.length > 0 && (
-              <div className="border border-[rgba(29,29,31,0.1)] rounded-lg overflow-hidden">
-                {participants.map((participant, index) => (
-                  <div 
-                    key={participant.id} 
-                    className={`bg-white flex items-center p-2 h-[31px] group ${index < participants.length - 1 ? 'border-b border-[rgba(29,29,31,0.1)]' : ''}`}
-                  >
-                    <div className="flex-1 flex items-center gap-[6px]">
-                      <img
-                        src={participant.avatarUrl || `https://i.pravatar.cc/150?u=${participant.id}`}
-                        alt={participant.name}
-                        className="w-[18px] h-[18px] rounded-full object-cover"
-                      />
-                      <span className="text-[12px] font-medium text-[#1d1d1f]">{participant.name}</span>
+            {(() => {
+              // Determine the organizer info
+              // For invites: use event.organizerEmail
+              // For own events: use currentUser
+              const isOwnEvent = !event?.isInvite;
+              const organizerEmail = event?.isInvite 
+                ? event?.organizerEmail?.toLowerCase()
+                : currentUser?.email?.toLowerCase();
+              const organizerName = event?.isInvite 
+                ? event?.organizerEmail 
+                : currentUser?.name;
+              const organizerAvatar = event?.isInvite
+                ? `https://i.pravatar.cc/150?u=${event?.organizerEmail}`
+                : currentUser?.avatarUrl || `https://i.pravatar.cc/150?u=${currentUser?.id}`;
+              
+              // Filter out organizer from participants to avoid duplicates
+              const filteredParticipants = organizerEmail 
+                ? participants.filter(p => p.email?.toLowerCase() !== organizerEmail)
+                : participants;
+              
+              const showOrganizer = organizerEmail && organizerName;
+              const hasParticipants = filteredParticipants.length > 0 || showOrganizer;
+              
+              if (!hasParticipants) return null;
+              
+              return (
+                <div className="border border-[rgba(29,29,31,0.1)] rounded-lg overflow-hidden">
+                  {/* Show organizer first */}
+                  {showOrganizer && (
+                    <div className={`bg-white flex items-center p-2 h-[31px] ${filteredParticipants.length > 0 ? 'border-b border-[rgba(29,29,31,0.1)]' : ''}`}>
+                      <div className="flex-1 flex items-center gap-[6px]">
+                        <img
+                          src={organizerAvatar}
+                          alt="Organizer"
+                          className="w-[18px] h-[18px] rounded-full object-cover"
+                        />
+                        <span className="text-[12px] font-medium text-[#1d1d1f]">{organizerName}</span>
+                        <span className="text-[10px] text-[#7d7d7f] bg-neutral-100 px-1.5 py-0.5 rounded">Organizer</span>
+                      </div>
                     </div>
-                    {isEditable && (
-                      <button
-                        onClick={() => removeParticipant(participant.id)}
-                        className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-5 h-5 rounded-[5px] text-[#7d7d7f] hover:bg-neutral-200 hover:text-[#1d1d1f] transition-all"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                  )}
+                  {filteredParticipants.map((participant, index) => (
+                    <div 
+                      key={participant.id} 
+                      className={`bg-white flex items-center p-2 h-[31px] group ${index < filteredParticipants.length - 1 ? 'border-b border-[rgba(29,29,31,0.1)]' : ''}`}
+                    >
+                      <div className="flex-1 flex items-center gap-[6px]">
+                        <img
+                          src={participant.avatarUrl || `https://i.pravatar.cc/150?u=${participant.id}`}
+                          alt={participant.name}
+                          className="w-[18px] h-[18px] rounded-full object-cover"
+                        />
+                        <span className="text-[12px] font-medium text-[#1d1d1f]">{participant.name}</span>
+                      </div>
+                      {isEditable && (
+                        <button
+                          onClick={() => removeParticipant(participant.id)}
+                          className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-5 h-5 rounded-[5px] text-[#7d7d7f] hover:bg-neutral-200 hover:text-[#1d1d1f] transition-all"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
 

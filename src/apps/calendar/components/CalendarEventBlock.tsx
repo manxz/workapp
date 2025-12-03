@@ -15,8 +15,23 @@ type CalendarEventBlockProps = {
   isResizing?: boolean;
 };
 
+// Normalize hex color (ensure it has # prefix and is valid)
+function normalizeHex(color: string): string {
+  if (!color) return '#4285F4'; // Default Google blue
+  let hex = color.trim();
+  if (!hex.startsWith('#')) {
+    hex = '#' + hex;
+  }
+  // Validate it's a proper hex color
+  if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+    return '#4285F4'; // Default Google blue for invalid colors
+  }
+  return hex;
+}
+
 // Convert hex color to rgba with opacity
-function hexToRgba(hex: string, opacity: number): string {
+function hexToRgba(color: string, opacity: number): string {
+  const hex = normalizeHex(color);
   const r = parseInt(hex.slice(1, 3), 16);
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
@@ -24,11 +39,25 @@ function hexToRgba(hex: string, opacity: number): string {
 }
 
 // Get a darker shade for text
-function getDarkerShade(hex: string): string {
+function getDarkerShade(color: string): string {
+  const hex = normalizeHex(color);
   const r = Math.max(0, parseInt(hex.slice(1, 3), 16) - 80);
   const g = Math.max(0, parseInt(hex.slice(3, 5), 16) - 80);
   const b = Math.max(0, parseInt(hex.slice(5, 7), 16) - 80);
   return `rgb(${r}, ${g}, ${b})`;
+}
+
+// Get a lighter/faded shade for past events (blend with white)
+function getFadedShade(color: string): string {
+  const hex = normalizeHex(color);
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  // Blend 60% toward white for a faded look
+  const fadedR = Math.round(r + (255 - r) * 0.6);
+  const fadedG = Math.round(g + (255 - g) * 0.6);
+  const fadedB = Math.round(b + (255 - b) * 0.6);
+  return `rgb(${fadedR}, ${fadedG}, ${fadedB})`;
 }
 
 // Check if calendar is a holiday calendar
@@ -36,19 +65,6 @@ function isHolidayCalendar(calendarId: string): boolean {
   return calendarId.includes('holiday') || calendarId === 'holidays';
 }
 
-// Work calendar colors
-const WORK_COLORS = {
-  // Future/selected events
-  futureBg: '#0070F3',
-  futureText: '#FFFFFF',
-  // Past events
-  pastBg: '#CCE2FD',
-  pastText: '#0C5EBE',
-  // Invite events (where user is attendee, not organizer)
-  inviteBg: '#FFFFFF',
-  inviteText: '#0070F3',
-  inviteBorder: '#0070F3',
-};
 
 export default function CalendarEventBlock({
   event,
@@ -87,32 +103,36 @@ export default function CalendarEventBlock({
   // Check if this is a holiday calendar (keep original styling for holidays)
   const isHoliday = isHolidayCalendar(event.calendarId);
   
-  // Check if this is a pending invite (user is attendee, not organizer, and hasn't accepted)
+  // Check if this is a pending invite (user is attendee, not organizer, and hasn't responded)
+  // myResponseStatus can be: 'needsAction', 'accepted', 'declined', 'tentative'
   const isInvite = event.isInvite === true;
-  const isPendingInvite = isInvite && event.myResponseStatus !== 'accepted';
+  const isPendingInvite = isInvite && event.myResponseStatus === 'needsAction';
 
-  // Determine colors based on event state
+  // Normalize the color from Google Calendar
+  const normalizedColor = normalizeHex(color);
+  
+  // Determine colors based on event state - use the calendar color from Google
   let bgColor: string;
   let textColor: string;
   let borderColor: string = 'white'; // Default white border
 
   if (isHoliday) {
     // Holiday events: keep semi-transparent styling
-    bgColor = hexToRgba(color, 0.2);
-    textColor = getDarkerShade(color);
+    bgColor = hexToRgba(normalizedColor, 0.2);
+    textColor = getDarkerShade(normalizedColor);
   } else if (isPendingInvite) {
-    // Pending invite events: white background, blue text, blue border
-    bgColor = WORK_COLORS.inviteBg;
-    textColor = WORK_COLORS.inviteText;
-    borderColor = WORK_COLORS.inviteBorder;
-  } else if (isSelected || !isPast) {
-    // Work calendar: Future or selected events - solid primary blue
-    bgColor = WORK_COLORS.futureBg;
-    textColor = WORK_COLORS.futureText;
+    // Pending invite events: white background with calendar color text/border
+    bgColor = '#FFFFFF';
+    textColor = normalizedColor;
+    borderColor = normalizedColor;
+  } else if (isPast && !isSelected) {
+    // Past events: faded/lighter background with calendar color as text
+    bgColor = getFadedShade(normalizedColor);
+    textColor = normalizedColor; // Use the calendar color for softer, cohesive look
   } else {
-    // Work calendar: Past events - light blue with dark text
-    bgColor = WORK_COLORS.pastBg;
-    textColor = WORK_COLORS.pastText;
+    // Future/selected events: solid calendar color with white text
+    bgColor = normalizedColor;
+    textColor = '#FFFFFF';
   }
 
   // Check if event has indicators to show
@@ -138,18 +158,18 @@ export default function CalendarEventBlock({
         }
       }}
       className={`
-        absolute rounded-[8px] overflow-hidden text-left
+        absolute rounded-[6px] overflow-hidden text-left
         flex flex-col items-start
         transition-all duration-100 cursor-pointer
         ${isShort ? 'justify-center' : hasIndicators ? 'justify-between' : 'justify-start'}
         ${isShort ? 'px-[6px] py-0' : 'px-[6px] py-[4px]'}
-        ${isDragging || isResizing ? 'opacity-50' : ''}
         group
       `}
       style={{
         ...style,
         backgroundColor: bgColor,
         border: `1px solid ${borderColor}`,
+        opacity: isDragging || isResizing ? 0.5 : 1,
       }}
     >
       {/* Title and time */}
@@ -218,7 +238,6 @@ export function AllDayEventBlock({
   event,
   color,
   onClick,
-  isSelected,
 }: Omit<CalendarEventBlockProps, 'style'>) {
   // Check if this is a holiday calendar
   const isHoliday = isHolidayCalendar(event.calendarId);
@@ -234,32 +253,35 @@ export function AllDayEventBlock({
   const isInvite = event.isInvite === true;
   const isPendingInvite = isInvite && event.myResponseStatus !== 'accepted';
 
-  // Determine colors based on event state
+  // Normalize the color from Google Calendar
+  const normalizedColor = normalizeHex(color);
+  
+  // Determine colors based on event state - use the calendar color from Google
   let bgColor: string;
   let textColor: string;
   let borderColor: string | undefined;
 
   if (isHoliday) {
     // Holiday events: keep semi-transparent styling
-    bgColor = hexToRgba(color, 0.2);
-    textColor = getDarkerShade(color);
+    bgColor = hexToRgba(normalizedColor, 0.2);
+    textColor = getDarkerShade(normalizedColor);
   } else if (isBirthday) {
-    // Birthday: solid color with green text
-    bgColor = color;
-    textColor = '#03641b';
+    // Birthday: solid color with darker text
+    bgColor = normalizedColor;
+    textColor = getDarkerShade(normalizedColor);
   } else if (isPendingInvite) {
-    // Pending invite events: white background, blue text, blue border
-    bgColor = WORK_COLORS.inviteBg;
-    textColor = WORK_COLORS.inviteText;
-    borderColor = WORK_COLORS.inviteBorder;
-  } else if (isSelected || !isPast) {
-    // Work calendar: Future or selected events - solid primary blue
-    bgColor = WORK_COLORS.futureBg;
-    textColor = WORK_COLORS.futureText;
+    // Pending invite events: white background with calendar color text/border
+    bgColor = '#FFFFFF';
+    textColor = normalizedColor;
+    borderColor = normalizedColor;
+  } else if (isPast) {
+    // Past events: faded/lighter background with calendar color as text
+    bgColor = getFadedShade(normalizedColor);
+    textColor = normalizedColor; // Use the calendar color for softer, cohesive look
   } else {
-    // Work calendar: Past events - light blue with dark text
-    bgColor = WORK_COLORS.pastBg;
-    textColor = WORK_COLORS.pastText;
+    // Future events: solid calendar color with white text
+    bgColor = normalizedColor;
+    textColor = '#FFFFFF';
   }
 
   return (
@@ -272,7 +294,7 @@ export function AllDayEventBlock({
         // Prevent grid from starting a new selection when clicking on an event
         e.stopPropagation();
       }}
-      className="w-full rounded-[8px] px-[6px] py-0 text-left truncate h-full flex items-center transition-all duration-100 cursor-pointer"
+      className="w-full rounded-[6px] px-[6px] py-0 text-left truncate h-full flex items-center transition-all duration-100 cursor-pointer"
       style={{ 
         backgroundColor: bgColor,
         border: borderColor ? `1px solid ${borderColor}` : undefined,

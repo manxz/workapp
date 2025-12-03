@@ -205,7 +205,10 @@ export function useCalendars() {
 
   const getCalendarColor = useCallback((calendarId: string) => {
     const calendar = calendars.find(c => c.id === calendarId);
-    return calendar?.color || '#3B82F6';
+    // Ensure we return a valid hex color
+    const color = calendar?.color;
+    if (!color || color.trim() === '') return '#3B82F6';
+    return color;
   }, [calendars]);
 
   // Get the default calendar (primary/editable one, or first enabled if no primary)

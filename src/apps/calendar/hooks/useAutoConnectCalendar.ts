@@ -170,11 +170,12 @@ async function syncCalendars(accountId: string, userId: string, accessToken: str
 
       if (existing) {
         // Update existing
+        // Use foregroundColor for richer, deeper colors (backgroundColor is often washed out)
         const { error: updateError } = await supabase
           .from('synced_calendars')
           .update({
             name: calendar.summary || 'Untitled Calendar',
-            color: calendar.backgroundColor || '#4285F4',
+            color: calendar.foregroundColor || calendar.backgroundColor || '#4285F4',
             is_primary: calendar.primary || false,
             updated_at: new Date().toISOString(),
           })
@@ -185,6 +186,7 @@ async function syncCalendars(accountId: string, userId: string, accessToken: str
         }
       } else {
         // Insert new
+        // Use foregroundColor for richer, deeper colors (backgroundColor is often washed out)
         const { error: insertError } = await supabase
           .from('synced_calendars')
           .insert({
@@ -192,7 +194,7 @@ async function syncCalendars(accountId: string, userId: string, accessToken: str
             user_id: userId,
             google_calendar_id: calendar.id,
             name: calendar.summary || 'Untitled Calendar',
-            color: calendar.backgroundColor || '#4285F4',
+            color: calendar.foregroundColor || calendar.backgroundColor || '#4285F4',
             is_primary: calendar.primary || false,
             is_enabled: true,
           });

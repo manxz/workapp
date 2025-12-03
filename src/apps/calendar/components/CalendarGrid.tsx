@@ -780,12 +780,14 @@ export default function CalendarGrid({
                   const endMinute = (dragPreviewSlot.minute + durationMinutes) % 60;
                   const endTime = formatSelectionTime(endHour, endMinute);
                   
+                  const eventColor = getCalendarColor(draggingEvent.calendarId);
+                  
                   return (
                     <div
                       className={`absolute rounded-[8px] overflow-hidden z-20 pointer-events-none flex flex-col border border-white ${isShort ? 'justify-center' : 'justify-start'}`}
                       style={{
                         ...previewStyle,
-                        backgroundColor: '#0070F3',
+                        backgroundColor: eventColor,
                         opacity: 0.85,
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                       }}
@@ -816,13 +818,14 @@ export default function CalendarGrid({
                   const isShort = durationMinutes < 45;
                   const startTime = formatSelectionTime(eventStart.getHours(), eventStart.getMinutes());
                   const endTime = formatSelectionTime(resizeEndSlot.hour, resizeEndSlot.minute);
+                  const eventColor = getCalendarColor(resizingEvent.calendarId);
                   
                   return (
                     <div
                       className={`absolute rounded-[8px] overflow-hidden z-20 pointer-events-none flex flex-col border border-white ${isShort ? 'justify-center' : 'justify-start'}`}
                       style={{
                         ...previewStyle,
-                        backgroundColor: '#0070F3',
+                        backgroundColor: eventColor,
                         opacity: 0.85,
                         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                       }}
