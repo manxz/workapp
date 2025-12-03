@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useMemo, useCallback, useEffect } from 'react';
+import { useRef, useMemo, useCallback, useEffect, useState } from 'react';
 import { Plus } from '@phosphor-icons/react';
-import { CalendarEvent, TimeSlot, SelectionRange, GRID_HOURS } from '../types';
+import { CalendarEvent, TimeSlot, SelectionRange, GRID_HOURS, SNAP_MINUTES } from '../types';
 import CalendarEventBlock, { AllDayEventBlock } from './CalendarEventBlock';
 
 /**
@@ -22,6 +22,7 @@ type CalendarGridProps = {
   timezone: string;
   getCalendarColor: (calendarId: string) => string;
   onEventClick: (event: CalendarEvent) => void;
+  onEventMove?: (event: CalendarEvent, newStart: Date, newEnd: Date) => void;
   selectedEventId?: string | null;
   // Selection handlers
   isDragging: boolean;
@@ -145,6 +146,7 @@ export default function CalendarGrid({
   timezone,
   getCalendarColor,
   onEventClick,
+  onEventMove,
   selectedEventId,
   isDragging,
   selectionRange,
@@ -161,6 +163,18 @@ export default function CalendarGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasScrolledRef = useRef(false);
+  
+  // Event dragging state
+  const [draggingEvent, setDraggingEvent] = useState<CalendarEvent | null>(null);
+  const [dragPreviewSlot, setDragPreviewSlot] = useState<{ date: Date; hour: number; minute: number } | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number; event: CalendarEvent; offsetMinutes: number } | null>(null);
+  const isDragSignificantRef = useRef(false);
+  
+  // Event resizing state
+  const [resizingEvent, setResizingEvent] = useState<CalendarEvent | null>(null);
+  const [resizeEndSlot, setResizeEndSlot] = useState<{ hour: number; minute: number } | null>(null);
+  const resizeStartRef = useRef<{ y: number; event: CalendarEvent } | null>(null);
+  const isResizeSignificantRef = useRef(false);
 
   // Auto-scroll to 8am on initial load
   useEffect(() => {
@@ -238,6 +252,7 @@ export default function CalendarGrid({
   }, [allDayEvents]);
 
   // Calculate event position and height with overlap support (Google Calendar style)
+  // Uses pure proportional sizing: 15 min = 1/4 cell, 30 min = 1/2 cell, etc.
   const getEventStyle = useCallback((event: CalendarEvent, layout?: EventLayout) => {
     const start = new Date(event.start);
     const end = new Date(event.end);
@@ -247,8 +262,9 @@ export default function CalendarGrid({
     
     // Offset by the first visible hour
     const firstHourOffset = FIRST_HOUR * 60;
-    const rawTop = ((startMinutes - firstHourOffset) / 60) * HOUR_HEIGHT;
-    const rawHeight = Math.max(((endMinutes - startMinutes) / 60) * HOUR_HEIGHT, 24);
+    const top = ((startMinutes - firstHourOffset) / 60) * HOUR_HEIGHT;
+    // Pure proportional height - no minimum constraint
+    const height = ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT;
     
     // Calculate horizontal positioning based on overlap
     const column = layout?.column ?? 0;
@@ -267,15 +283,16 @@ export default function CalendarGrid({
     // Events extend from their left position to the right edge (minus 12px)
     // This creates the overlapping card effect
     return {
-      top: `${rawTop}px`,
-      height: `${rawHeight - 1}px`, // Subtract 1px for bottom padding
+      top: `${top}px`,
+      height: `${height}px`,
       left: `calc((100% - 12px) * ${leftPercent / 100})`,
       right: '12px', // Always 12px from right edge
       zIndex: column + 1, // Higher columns appear on top
     };
   }, []);
 
-  // Get selection overlay style
+  // Get selection overlay style - uses pure proportional sizing
+  // 15 min = 1/4 cell, 30 min = 1/2 cell, 45 min = 3/4 cell, 60 min = full cell
   const getSelectionStyle = useCallback((range: SelectionRange, day: Date) => {
     // Only show selection on the same day
     if (range.start.date.toDateString() !== day.toDateString()) return null;
@@ -286,17 +303,18 @@ export default function CalendarGrid({
     // Offset by the first visible hour
     const firstHourOffset = FIRST_HOUR * 60;
     const top = ((startMinutes - firstHourOffset) / 60) * HOUR_HEIGHT;
-    const height = Math.max(((endMinutes - startMinutes) / 60) * HOUR_HEIGHT, 15);
+    // Pure proportional height - no minimum constraint
+    const height = ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT;
     
     return {
       top: `${top}px`,
       height: `${height}px`,
-      left: '0',
-      right: '0',
+      left: '1px',
+      right: '12px',
     };
   }, []);
 
-  // Get pending event style (similar to regular event style)
+  // Get pending event style - uses pure proportional sizing to match selection
   const getPendingEventStyle = useCallback((event: PendingEvent, day: Date) => {
     // Only show on the same day
     if (event.start.toDateString() !== day.toDateString()) return null;
@@ -306,13 +324,13 @@ export default function CalendarGrid({
     
     // Offset by the first visible hour
     const firstHourOffset = FIRST_HOUR * 60;
-    const rawTop = ((startMinutes - firstHourOffset) / 60) * HOUR_HEIGHT;
-    const rawHeight = Math.max(((endMinutes - startMinutes) / 60) * HOUR_HEIGHT, 24);
+    const top = ((startMinutes - firstHourOffset) / 60) * HOUR_HEIGHT;
+    // Pure proportional height - no minimum constraint
+    const height = ((endMinutes - startMinutes) / 60) * HOUR_HEIGHT;
     
-    // Add padding: 1px top, 1px left, 2px bottom, 12px right
     return {
-      top: `${rawTop + 1}px`,
-      height: `${rawHeight - 3}px`,
+      top: `${top}px`,
+      height: `${height}px`,
       left: '1px',
       right: '12px',
     };
@@ -320,16 +338,265 @@ export default function CalendarGrid({
 
   // Handle mouse events with grid context
   const handleMouseDown = useCallback((e: React.MouseEvent, day: Date) => {
+    // Don't start grid selection if we're dragging an event
+    if (draggingEvent) return;
     if (!gridRef.current) return;
     const rect = gridRef.current.getBoundingClientRect();
     onMouseDown(e, rect.top, HOUR_HEIGHT, day);
-  }, [onMouseDown]);
+  }, [onMouseDown, draggingEvent]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent, day: Date) => {
     if (!gridRef.current) return;
     const rect = gridRef.current.getBoundingClientRect();
+    
+    // Handle event resizing
+    if (resizingEvent && resizeStartRef.current) {
+      const dy = Math.abs(e.clientY - resizeStartRef.current.y);
+      if (dy > 3) {
+        isResizeSignificantRef.current = true;
+      }
+      
+      // Calculate the new end time based on cursor position
+      const relativeY = e.clientY - rect.top;
+      const cursorMinutes = (relativeY / HOUR_HEIGHT) * 60;
+      
+      // Snap to 15-min intervals
+      const snappedMinutes = Math.round(cursorMinutes / SNAP_MINUTES) * SNAP_MINUTES;
+      let hour = Math.floor(snappedMinutes / 60);
+      let minute = snappedMinutes % 60;
+      
+      // Handle overflow
+      if (minute >= 60) {
+        minute = 0;
+        hour += 1;
+      }
+      
+      // Ensure minimum duration (15 min) and valid range
+      const eventStart = new Date(resizingEvent.start);
+      const eventStartMinutes = eventStart.getHours() * 60 + eventStart.getMinutes();
+      const newEndMinutes = hour * 60 + minute;
+      
+      if (newEndMinutes <= eventStartMinutes + 15) {
+        // Minimum 15 min duration
+        hour = Math.floor((eventStartMinutes + 15) / 60);
+        minute = (eventStartMinutes + 15) % 60;
+      }
+      
+      hour = Math.min(24, hour); // Allow ending at midnight (24:00)
+      
+      setResizeEndSlot({ hour, minute });
+      return;
+    }
+    
+    // Handle event dragging
+    if (draggingEvent && dragStartRef.current) {
+      // Check if drag is significant (moved more than 5px)
+      const dx = Math.abs(e.clientX - dragStartRef.current.x);
+      const dy = Math.abs(e.clientY - dragStartRef.current.y);
+      if (dx > 5 || dy > 5) {
+        isDragSignificantRef.current = true;
+      }
+      
+      // Calculate the time slot for event START (accounting for where user grabbed the event)
+      const relativeY = e.clientY - rect.top;
+      const cursorMinutes = (relativeY / HOUR_HEIGHT) * 60;
+      // Subtract the offset so the event stays "attached" to where they grabbed it
+      const eventStartMinutes = cursorMinutes - dragStartRef.current.offsetMinutes;
+      
+      // Snap to 15-min intervals
+      const snappedMinutes = Math.round(eventStartMinutes / SNAP_MINUTES) * SNAP_MINUTES;
+      let hour = Math.floor(snappedMinutes / 60);
+      let minute = snappedMinutes % 60;
+      
+      // Handle negative and overflow
+      if (minute < 0) {
+        minute += 60;
+        hour -= 1;
+      }
+      if (minute >= 60) {
+        minute = 0;
+        hour += 1;
+      }
+      
+      hour = Math.max(0, Math.min(23, hour));
+      minute = Math.max(0, minute);
+      
+      setDragPreviewSlot({
+        date: new Date(day),
+        hour,
+        minute,
+      });
+      return;
+    }
+    
     onMouseMove(e, rect.top, HOUR_HEIGHT, day);
-  }, [onMouseMove]);
+  }, [onMouseMove, draggingEvent, resizingEvent]);
+
+  // Handle event drag start
+  const handleEventDragStart = useCallback((e: React.MouseEvent, event: CalendarEvent, gridTop: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Calculate where on the event the user clicked (offset from event start in minutes)
+    const eventStart = new Date(event.start);
+    const eventStartMinutes = eventStart.getHours() * 60 + eventStart.getMinutes();
+    const clickedMinutes = ((e.clientY - gridTop) / HOUR_HEIGHT) * 60;
+    const offsetMinutes = clickedMinutes - eventStartMinutes;
+    
+    dragStartRef.current = { x: e.clientX, y: e.clientY, event, offsetMinutes };
+    isDragSignificantRef.current = false;
+    setDraggingEvent(event);
+  }, []);
+
+  // Handle event drag end (global mouse up)
+  const handleEventDragEnd = useCallback(() => {
+    if (!draggingEvent || !dragPreviewSlot || !isDragSignificantRef.current || !onEventMove) {
+      // If not significant drag, treat as click
+      if (draggingEvent && !isDragSignificantRef.current) {
+        onEventClick(draggingEvent);
+      }
+      setDraggingEvent(null);
+      setDragPreviewSlot(null);
+      dragStartRef.current = null;
+      isDragSignificantRef.current = false;
+      return;
+    }
+    
+    // Calculate new start and end times
+    const originalStart = new Date(draggingEvent.start);
+    const originalEnd = new Date(draggingEvent.end);
+    const duration = originalEnd.getTime() - originalStart.getTime();
+    
+    const newStart = new Date(dragPreviewSlot.date);
+    newStart.setHours(dragPreviewSlot.hour, dragPreviewSlot.minute, 0, 0);
+    
+    const newEnd = new Date(newStart.getTime() + duration);
+    
+    onEventMove(draggingEvent, newStart, newEnd);
+    
+    setDraggingEvent(null);
+    setDragPreviewSlot(null);
+    dragStartRef.current = null;
+    isDragSignificantRef.current = false;
+  }, [draggingEvent, dragPreviewSlot, onEventMove, onEventClick]);
+
+  // Global mouse up listener for event drag
+  useEffect(() => {
+    if (!draggingEvent) return;
+    
+    const handleGlobalMouseUp = () => {
+      handleEventDragEnd();
+    };
+    
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [draggingEvent, handleEventDragEnd]);
+
+  // Handle event resize start
+  const handleResizeStart = useCallback((e: React.MouseEvent, event: CalendarEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    resizeStartRef.current = { y: e.clientY, event };
+    isResizeSignificantRef.current = false;
+    setResizingEvent(event);
+    
+    // Set initial end slot to current end time
+    const eventEnd = new Date(event.end);
+    setResizeEndSlot({
+      hour: eventEnd.getHours(),
+      minute: eventEnd.getMinutes(),
+    });
+  }, []);
+
+  // Handle event resize end
+  const handleResizeEnd = useCallback(() => {
+    if (!resizingEvent || !resizeEndSlot || !isResizeSignificantRef.current || !onEventMove) {
+      setResizingEvent(null);
+      setResizeEndSlot(null);
+      resizeStartRef.current = null;
+      isResizeSignificantRef.current = false;
+      return;
+    }
+    
+    // Calculate new end time
+    const originalStart = new Date(resizingEvent.start);
+    const newEnd = new Date(originalStart);
+    newEnd.setHours(resizeEndSlot.hour, resizeEndSlot.minute, 0, 0);
+    
+    // If end is at or before start, don't update
+    if (newEnd <= originalStart) {
+      setResizingEvent(null);
+      setResizeEndSlot(null);
+      resizeStartRef.current = null;
+      isResizeSignificantRef.current = false;
+      return;
+    }
+    
+    onEventMove(resizingEvent, originalStart, newEnd);
+    
+    setResizingEvent(null);
+    setResizeEndSlot(null);
+    resizeStartRef.current = null;
+    isResizeSignificantRef.current = false;
+  }, [resizingEvent, resizeEndSlot, onEventMove]);
+
+  // Global mouse up listener for event resize
+  useEffect(() => {
+    if (!resizingEvent) return;
+    
+    const handleGlobalMouseUp = () => {
+      handleResizeEnd();
+    };
+    
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [resizingEvent, handleResizeEnd]);
+
+  // Get drag preview style - full width with no right padding
+  const getDragPreviewStyle = useCallback(() => {
+    if (!draggingEvent || !dragPreviewSlot) return null;
+    
+    const originalStart = new Date(draggingEvent.start);
+    const originalEnd = new Date(draggingEvent.end);
+    const durationMinutes = (originalEnd.getTime() - originalStart.getTime()) / (1000 * 60);
+    
+    const startMinutes = dragPreviewSlot.hour * 60 + dragPreviewSlot.minute;
+    const firstHourOffset = FIRST_HOUR * 60;
+    const top = ((startMinutes - firstHourOffset) / 60) * HOUR_HEIGHT;
+    const height = (durationMinutes / 60) * HOUR_HEIGHT;
+    
+    return {
+      top: `${top}px`,
+      height: `${height}px`,
+      left: '0',
+      right: '0',
+    };
+  }, [draggingEvent, dragPreviewSlot]);
+
+  // Get resize preview style - shows the event with new end time
+  const getResizePreviewStyle = useCallback((day: Date) => {
+    if (!resizingEvent || !resizeEndSlot) return null;
+    
+    // Only show on the event's day
+    const eventStart = new Date(resizingEvent.start);
+    if (eventStart.toDateString() !== day.toDateString()) return null;
+    
+    const startMinutes = eventStart.getHours() * 60 + eventStart.getMinutes();
+    const endMinutes = resizeEndSlot.hour * 60 + resizeEndSlot.minute;
+    const durationMinutes = endMinutes - startMinutes;
+    
+    const firstHourOffset = FIRST_HOUR * 60;
+    const top = ((startMinutes - firstHourOffset) / 60) * HOUR_HEIGHT;
+    const height = (durationMinutes / 60) * HOUR_HEIGHT;
+    
+    return {
+      top: `${top}px`,
+      height: `${height}px`,
+      left: '0',
+      right: '0',
+    };
+  }, [resizingEvent, resizeEndSlot]);
 
   // Format hour label
   const formatHour = (hour: number): string => {
@@ -484,9 +751,94 @@ export default function CalendarGrid({
                       color={getCalendarColor(event.calendarId)}
                       style={getEventStyle(event, layouts.get(event.id))}
                       onClick={() => onEventClick(event)}
+                      onDragStart={(e) => {
+                        if (!gridRef.current) return;
+                        const rect = gridRef.current.getBoundingClientRect();
+                        handleEventDragStart(e, event, rect.top);
+                      }}
+                      onResizeStart={(e) => handleResizeStart(e, event)}
                       isSelected={selectedEventId === event.id}
+                      isDragging={draggingEvent?.id === event.id}
+                      isResizing={resizingEvent?.id === event.id}
                     />
                   ));
+                })()}
+                
+                {/* Drag preview - shown when dragging event to this day */}
+                {draggingEvent && dragPreviewSlot && 
+                 dragPreviewSlot.date.toDateString() === day.toDateString() && 
+                 isDragSignificantRef.current && (() => {
+                  const previewStyle = getDragPreviewStyle();
+                  if (!previewStyle) return null;
+                  
+                  const originalStart = new Date(draggingEvent.start);
+                  const originalEnd = new Date(draggingEvent.end);
+                  const durationMinutes = (originalEnd.getTime() - originalStart.getTime()) / (1000 * 60);
+                  const isShort = durationMinutes < 45;
+                  const startTime = formatSelectionTime(dragPreviewSlot.hour, dragPreviewSlot.minute);
+                  const endHour = dragPreviewSlot.hour + Math.floor((dragPreviewSlot.minute + durationMinutes) / 60);
+                  const endMinute = (dragPreviewSlot.minute + durationMinutes) % 60;
+                  const endTime = formatSelectionTime(endHour, endMinute);
+                  
+                  return (
+                    <div
+                      className={`absolute rounded-[8px] overflow-hidden z-20 pointer-events-none flex flex-col border border-white ${isShort ? 'justify-center' : 'justify-start'}`}
+                      style={{
+                        ...previewStyle,
+                        backgroundColor: '#0070F3',
+                        opacity: 0.85,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      }}
+                    >
+                      <div className={`px-[6px] flex flex-col text-[11px] font-medium leading-normal ${isShort ? 'py-0' : 'py-[4px]'}`} style={{ color: '#FFFFFF' }}>
+                        {isShort ? (
+                          <span className="truncate">{draggingEvent.title}, {startTime}</span>
+                        ) : (
+                          <>
+                            <span className="truncate">{draggingEvent.title}</span>
+                            <span className="truncate opacity-90">{startTime} - {endTime}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+                
+                {/* Resize preview - shown when resizing event */}
+                {resizingEvent && resizeEndSlot && isResizeSignificantRef.current && (() => {
+                  const previewStyle = getResizePreviewStyle(day);
+                  if (!previewStyle) return null;
+                  
+                  const eventStart = new Date(resizingEvent.start);
+                  const startMinutes = eventStart.getHours() * 60 + eventStart.getMinutes();
+                  const endMinutes = resizeEndSlot.hour * 60 + resizeEndSlot.minute;
+                  const durationMinutes = endMinutes - startMinutes;
+                  const isShort = durationMinutes < 45;
+                  const startTime = formatSelectionTime(eventStart.getHours(), eventStart.getMinutes());
+                  const endTime = formatSelectionTime(resizeEndSlot.hour, resizeEndSlot.minute);
+                  
+                  return (
+                    <div
+                      className={`absolute rounded-[8px] overflow-hidden z-20 pointer-events-none flex flex-col border border-white ${isShort ? 'justify-center' : 'justify-start'}`}
+                      style={{
+                        ...previewStyle,
+                        backgroundColor: '#0070F3',
+                        opacity: 0.85,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      }}
+                    >
+                      <div className={`px-[6px] flex flex-col text-[11px] font-medium leading-normal ${isShort ? 'py-0' : 'py-[4px]'}`} style={{ color: '#FFFFFF' }}>
+                        {isShort ? (
+                          <span className="truncate">{resizingEvent.title}, {startTime}</span>
+                        ) : (
+                          <>
+                            <span className="truncate">{resizingEvent.title}</span>
+                            <span className="truncate opacity-90">{startTime} - {endTime}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
                 })()}
 
                 {/* Pending event block (shown while creating new event - not for all-day events) */}

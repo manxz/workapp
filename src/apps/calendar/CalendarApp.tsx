@@ -267,6 +267,26 @@ export default function CalendarApp() {
     }
   }, [selectedEvent, rsvpToEvent]);
 
+  // Handle event move (drag and drop) - uses optimistic update for instant feedback
+  const handleEventMove = useCallback(async (event: CalendarEvent, newStart: Date, newEnd: Date) => {
+    // Don't allow moving events we can't edit
+    if (!canEditEvent(event)) return;
+    
+    // Use optimistic update for instant UI response
+    await editEvent(event.id, {
+      title: event.title,
+      description: event.description,
+      calendarId: event.calendarId,
+      participants: event.participants,
+      allDay: event.allDay,
+      start: newStart.toISOString(),
+      end: newEnd.toISOString(),
+      repeat: event.repeat,
+      location: event.location,
+      videoCall: event.videoCall,
+    }, true); // optimistic = true
+  }, [canEditEvent, editEvent]);
+
   // Get the default calendar ID (memoized)
   const defaultCalendarId = useMemo(() => {
     return getDefaultCalendarId() || 'work';
@@ -323,6 +343,7 @@ export default function CalendarApp() {
           timezone={timezone}
           getCalendarColor={getCalendarColor}
           onEventClick={handleEventClick}
+          onEventMove={handleEventMove}
           selectedEventId={selectedEvent?.id}
           isDragging={timeSelection.isDragging}
           selectionRange={timeSelection.getSelectionRange()}

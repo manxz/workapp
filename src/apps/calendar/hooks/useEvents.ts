@@ -219,7 +219,8 @@ export function useEvents(
 
   const editEvent = useCallback(async (
     eventId: string, 
-    updates: Partial<EventPayload>
+    updates: Partial<EventPayload>,
+    optimistic?: boolean
   ): Promise<CalendarEvent | null> => {
     // Find the event to get its calendarId
     const existingEvent = allEvents.find(e => e.id === eventId);
@@ -228,9 +229,37 @@ export function useEvents(
       return null;
     }
     
+    const calendarId = updates.calendarId || existingEvent.calendarId;
+    
+    // For optimistic updates, update UI immediately before API call
+    if (optimistic) {
+      const optimisticEvent = { ...existingEvent, ...updates, calendarId };
+      const optimisticEvents = allEvents.map(e => e.id === eventId ? optimisticEvent : e);
+      setAllEvents(optimisticEvents);
+      
+      // Update cache immediately
+      const range = fetchRangeRef.current || getLargeRange();
+      saveCache({
+        events: optimisticEvents,
+        timestamp: Date.now(),
+        rangeStart: range.start,
+        rangeEnd: range.end,
+      });
+      
+      // Make API call in background
+      updateEvent(eventId, updates, calendarId).catch(err => {
+        console.error('Error updating event:', err);
+        // Revert on error
+        setAllEvents(allEvents);
+        setError('Failed to update event');
+      });
+      
+      return optimisticEvent as CalendarEvent;
+    }
+    
+    // Non-optimistic: wait for API response
     try {
       setSavingEventId(eventId);
-      const calendarId = updates.calendarId || existingEvent.calendarId;
       const updated = await updateEvent(eventId, updates, calendarId);
       
       // Merge updated fields with existing event data

@@ -276,7 +276,7 @@ async function loadProfileCache(): Promise<Map<string, UserSummary>> {
   if (profileCache) return profileCache;
   
   const { data: profiles } = await supabase
-    .from('profiles_with_email')
+    .from('profiles')
     .select('id, full_name, email, avatar_url');
   
   profileCache = new Map();
@@ -724,12 +724,12 @@ export async function respondToInvite(
 
 /**
  * Search users for participant selection
- * Uses profiles_with_email view to get email from auth.users
+ * Queries profiles table directly
  */
 export async function searchUsers(query: string): Promise<UserSummary[]> {
-  // If no query, return all users in the org
+  // If no query, return all users
   const baseQuery = supabase
-    .from('profiles_with_email')
+    .from('profiles')
     .select('id, full_name, email, avatar_url')
     .limit(20);
   

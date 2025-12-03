@@ -8,7 +8,11 @@ type CalendarEventBlockProps = {
   color: string;
   style: React.CSSProperties;
   onClick: () => void;
+  onDragStart?: (e: React.MouseEvent) => void;
+  onResizeStart?: (e: React.MouseEvent) => void;
   isSelected?: boolean;
+  isDragging?: boolean;
+  isResizing?: boolean;
 };
 
 // Convert hex color to rgba with opacity
@@ -51,7 +55,11 @@ export default function CalendarEventBlock({
   color,
   style,
   onClick,
+  onDragStart,
+  onResizeStart,
   isSelected,
+  isDragging,
+  isResizing,
 }: CalendarEventBlockProps) {
   // Format time range
   const formatTime = (isoString: string): string => {
@@ -116,11 +124,18 @@ export default function CalendarEventBlock({
     <button
       onClick={(e) => {
         e.stopPropagation();
-        onClick();
+        // Don't trigger click if we just finished dragging or resizing
+        if (!isDragging && !isResizing) {
+          onClick();
+        }
       }}
       onMouseDown={(e) => {
         // Prevent grid from starting a new selection when clicking on an event
         e.stopPropagation();
+        // Start drag if handler provided (but not if clicking on resize handle)
+        if (onDragStart && !(e.target as HTMLElement).dataset.resizeHandle) {
+          onDragStart(e);
+        }
       }}
       className={`
         absolute rounded-[8px] overflow-hidden text-left
@@ -128,6 +143,8 @@ export default function CalendarEventBlock({
         transition-all duration-100 cursor-pointer
         ${isShort ? 'justify-center' : hasIndicators ? 'justify-between' : 'justify-start'}
         ${isShort ? 'px-[6px] py-0' : 'px-[6px] py-[4px]'}
+        ${isDragging || isResizing ? 'opacity-50' : ''}
+        group
       `}
       style={{
         ...style,
@@ -177,6 +194,20 @@ export default function CalendarEventBlock({
             <VideoCamera size={12} weight="fill" style={{ color: textColor }} />
           )}
         </div>
+      )}
+      
+      {/* Resize handle at bottom */}
+      {onResizeStart && (
+        <div
+          data-resize-handle="true"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onResizeStart(e);
+          }}
+          className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ backgroundColor: 'transparent' }}
+        />
       )}
     </button>
   );
