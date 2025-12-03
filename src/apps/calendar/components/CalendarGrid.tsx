@@ -681,10 +681,14 @@ export default function CalendarGrid({
                   />
                 ))}
                 {/* Pending all-day event */}
-                {showPendingAllDay && (
+                {showPendingAllDay && pendingEvent && (
                   <div
-                    className="rounded-[8px] px-[6px] h-full flex items-center text-[11px] font-medium leading-normal truncate pointer-events-none"
-                    style={{ backgroundColor: '#CCE2FD', color: '#0C5EBE' }}
+                    className="rounded-[6px] px-[6px] h-full flex items-center text-[11px] font-medium leading-normal truncate pointer-events-none"
+                    style={{ 
+                      backgroundColor: getCalendarColor(pendingEvent.calendarId), 
+                      color: '#FFFFFF',
+                      opacity: 0.85,
+                    }}
                   >
                     {pendingEvent.title || '(No title)'}
                   </div>
@@ -784,7 +788,7 @@ export default function CalendarGrid({
                   
                   return (
                     <div
-                      className={`absolute rounded-[8px] overflow-hidden z-20 pointer-events-none flex flex-col border border-white ${isShort ? 'justify-center' : 'justify-start'}`}
+                      className={`absolute rounded-[6px] overflow-hidden z-20 pointer-events-none flex flex-col border border-white ${isShort ? 'justify-center' : 'justify-start'}`}
                       style={{
                         ...previewStyle,
                         backgroundColor: eventColor,
@@ -822,7 +826,7 @@ export default function CalendarGrid({
                   
                   return (
                     <div
-                      className={`absolute rounded-[8px] overflow-hidden z-20 pointer-events-none flex flex-col border border-white ${isShort ? 'justify-center' : 'justify-start'}`}
+                      className={`absolute rounded-[6px] overflow-hidden z-20 pointer-events-none flex flex-col border border-white ${isShort ? 'justify-center' : 'justify-start'}`}
                       style={{
                         ...previewStyle,
                         backgroundColor: eventColor,
@@ -851,16 +855,18 @@ export default function CalendarGrid({
                   const title = pendingEvent.title || '(No title)';
                   const startTime = formatSelectionTime(pendingEvent.start.getHours(), pendingEvent.start.getMinutes());
                   const endTime = formatSelectionTime(pendingEvent.end.getHours(), pendingEvent.end.getMinutes());
+                  const calendarColor = getCalendarColor(pendingEvent.calendarId);
                   
                   return (
                     <div
-                      className={`absolute rounded-[4px] overflow-hidden z-10 pointer-events-none flex flex-col ${isShort ? 'justify-center' : 'justify-start'}`}
+                      className={`absolute rounded-[6px] overflow-hidden z-10 pointer-events-none flex flex-col ${isShort ? 'justify-center' : 'justify-start'}`}
                       style={{
                         ...getPendingEventStyle(pendingEvent, day)!,
-                        backgroundColor: '#CCE2FD',
+                        backgroundColor: calendarColor,
+                        opacity: 0.85,
                       }}
                     >
-                      <div className={`px-[6px] flex flex-col text-[11px] font-medium leading-normal ${isShort ? 'py-0' : 'py-[4px]'}`} style={{ color: '#0C5EBE' }}>
+                      <div className={`px-[6px] flex flex-col text-[11px] font-medium leading-normal ${isShort ? 'py-0' : 'py-[4px]'}`} style={{ color: '#FFFFFF' }}>
                         {isShort ? (
                           <span className="truncate">{title}, {startTime}</span>
                         ) : (
@@ -882,16 +888,18 @@ export default function CalendarGrid({
                   const isShort = durationMinutes < 45;
                   const startTime = formatSelectionTime(selectionRange.start.hour, selectionRange.start.minute);
                   const endTime = formatSelectionTime(selectionRange.end.hour, selectionRange.end.minute);
+                  const calendarColor = getCalendarColor(defaultCalendarId || 'work');
                   
                   return (
                     <div
-                      className={`absolute rounded-[4px] overflow-hidden pointer-events-none z-10 flex flex-col ${isShort ? 'justify-center' : 'justify-start'}`}
+                      className={`absolute rounded-[6px] overflow-hidden pointer-events-none z-10 flex flex-col ${isShort ? 'justify-center' : 'justify-start'}`}
                       style={{
                         ...getSelectionStyle(selectionRange, day),
-                        backgroundColor: '#CCE2FD',
+                        backgroundColor: calendarColor,
+                        opacity: 0.85,
                       }}
                     >
-                      <div className={`px-[6px] flex flex-col text-[11px] font-medium leading-normal ${isShort ? 'py-0' : 'py-[4px]'}`} style={{ color: '#0C5EBE' }}>
+                      <div className={`px-[6px] flex flex-col text-[11px] font-medium leading-normal ${isShort ? 'py-0' : 'py-[4px]'}`} style={{ color: '#FFFFFF' }}>
                         {isShort ? (
                           <span className="truncate">(No title), {startTime}</span>
                         ) : (
