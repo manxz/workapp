@@ -9,7 +9,7 @@ export default function PrivacyPolicy() {
 
         {/* Content */}
         <div className="text-[14px] font-normal leading-6 text-black space-y-0">
-          <p className="text-[#6a6a6a] mb-4">Last Updated: December 4, 2025</p>
+          <p className="text-[#6a6a6a] mb-4">Last Updated: December 5, 2025</p>
           
           <p className="mb-1"><strong>Company:</strong> Manxz, Inc. (&quot;Manxz,&quot; &quot;we,&quot; &quot;us,&quot; &quot;our&quot;)</p>
           <p className="mb-4"><strong>Product:</strong> Workapp (&quot;Workapp,&quot; &quot;the Service&quot;)</p>
@@ -73,13 +73,10 @@ export default function PrivacyPolicy() {
             <li>Supabase logs</li>
           </ul>
 
-          <h3 className="font-semibold mb-1">2.4. Calendar Integrations</h3>
-          <p className="mb-1">If you sync your calendar:</p>
-          <ul className="list-disc ml-5 mb-1">
-            <li>We access event titles, times, descriptions, and participants</li>
-            <li>Access is used only to display and manage your calendar within the Service</li>
-          </ul>
-          <p className="mb-4">We do not modify calendar data unless you explicitly perform an action within Workapp that requires modification.</p>
+          <h3 className="font-semibold mb-1">2.4. Google Calendar Integrations</h3>
+          <p className="mb-4">
+            If you choose to connect your Google Calendar to Workapp, we access your calendar data through Google&apos;s APIs only after you grant permission. This may include your calendar list, event titles, descriptions, times, reminders, locations, and participant details, as well as basic calendar settings and sharing information. We use this data solely to show your calendars inside Workapp, sync events, and let you create, edit, or delete events when you take an action in the app. We do not use Google Calendar data for advertising, do not sell it, and do not use it for anything outside the calendar features you choose to use. You can disconnect Workapp from your Google account at any time in your Google Account settings or within Workapp. Calendar data is stored only as needed to provide the Service and is deleted when you disconnect or remove your account, according to our normal retention schedule.
+          </p>
 
           <h3 className="font-semibold mb-1">2.5. Cookies and Tracking Technologies</h3>
           <p className="mb-1">We use:</p>
