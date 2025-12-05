@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Sidebar from "@/components/Sidebar";
 import Login from "@/components/Login";
 import ProfileSetup from "@/components/ProfileSetup";
+import OrgSetup from "@/components/OrgSetup";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import { useAppPreferences } from "@/hooks/useAppPreferences";
@@ -49,7 +50,7 @@ const AppLibraryView = dynamic(() => import("@/apps/library/AppLibraryView"), {
 });
 
 function HomeContent() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, organization, loading } = useAuth();
   const { unreadCount } = useUnreadMessages();
   const { isAppEnabled, toggleApp, loading: appsLoading } = useAppPreferences();
   const { channels, loading: channelsLoading } = useChannels();
@@ -181,6 +182,11 @@ function HomeContent() {
   // Show profile setup if user hasn't set their name
   if (user && (!profile || !profile.full_name)) {
     return <ProfileSetup />;
+  }
+
+  // Show org setup if user has no organization
+  if (user && profile && !organization) {
+    return <OrgSetup />;
   }
 
   return (
