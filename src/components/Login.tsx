@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
-import Link from "next/link";
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
@@ -97,13 +96,9 @@ export default function Login() {
       {/* Terms of Service & Privacy Policy Links */}
       <p className="mt-3 text-[12px] text-[#6a6a6a]">
         By continuing, you agree to our{' '}
-        <Link href="/tos" className="underline hover:text-[#1d1d1f]">
-          Terms of Service
-        </Link>
+        <a href="/tos" className="underline hover:text-[#1d1d1f]">Terms of Service</a>
         {' '}and{' '}
-        <Link href="/privacy" className="underline hover:text-[#1d1d1f]">
-          Privacy Policy
-        </Link>
+        <a href="/privacy" className="underline hover:text-[#1d1d1f]">Privacy Policy</a>
       </p>
     </div>
   );

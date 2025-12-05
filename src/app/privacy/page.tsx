@@ -1,5 +1,3 @@
-"use client";
-
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-[#fafafa]">
