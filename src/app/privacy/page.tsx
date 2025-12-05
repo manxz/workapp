@@ -74,9 +74,42 @@ export default function PrivacyPolicy() {
           </ul>
 
           <h3 className="font-semibold mb-1">2.4. Google Calendar Integrations</h3>
-          <p className="mb-4">
-            If you choose to connect your Google Calendar to Workapp, we access your calendar data through Google&apos;s APIs only after you grant permission. This may include your calendar list, event titles, descriptions, times, reminders, locations, and participant details, as well as basic calendar settings and sharing information. We use this data solely to show your calendars inside Workapp, sync events, and let you create, edit, or delete events when you take an action in the app. We do not use Google Calendar data for advertising, do not sell it, and do not use it for anything outside the calendar features you choose to use. You can disconnect Workapp from your Google account at any time in your Google Account settings or within Workapp. Calendar data is stored only as needed to provide the Service and is deleted when you disconnect or remove your account, according to our normal retention schedule.
+          <p className="mb-2">
+            Workapp uses Google&apos;s APIs to power all calendar features. If you choose to use the calendar portion of Workapp, we require access to your Google Calendar so we can show and sync your schedule.
           </p>
+          
+          <p className="font-semibold mb-1">What we access:</p>
+          <ul className="list-disc ml-5 mb-2">
+            <li>Your calendar list</li>
+            <li>Event details (title, time, description, location, participants, reminders)</li>
+            <li>Basic calendar settings and sharing information</li>
+          </ul>
+          
+          <p className="font-semibold mb-1">What we use it for:</p>
+          <ul className="list-disc ml-5 mb-2">
+            <li>Showing your calendars inside Workapp</li>
+            <li>Keeping events in sync</li>
+            <li>Letting you create, edit, or delete events when you take an action in the app</li>
+          </ul>
+          
+          <p className="font-semibold mb-1">What we don&apos;t do:</p>
+          <ul className="list-disc ml-5 mb-2">
+            <li>No advertising or marketing use</li>
+            <li>No selling or sharing Google Calendar data</li>
+            <li>No unrelated use outside of calendar features</li>
+          </ul>
+          
+          <p className="font-semibold mb-1">Your choices:</p>
+          <ul className="list-disc ml-5 mb-2">
+            <li>If you decline access, you can still use Workapp, but the calendar will be locked</li>
+            <li>You can revoke Workapp&apos;s access at any time through your Google Account settings</li>
+          </ul>
+          
+          <p className="font-semibold mb-1">Data retention:</p>
+          <ul className="list-disc ml-5 mb-4">
+            <li>Calendar data is stored only as needed to provide calendar features</li>
+            <li>It is deleted when you revoke access or remove your Workapp account</li>
+          </ul>
 
           <h3 className="font-semibold mb-1">2.5. Cookies and Tracking Technologies</h3>
           <p className="mb-1">We use:</p>
